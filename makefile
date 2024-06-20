@@ -1,8 +1,8 @@
-AS:=as --32
+# AS:=as --32
+AS:=nasm -f elf32
 CC:=gcc -m32
 
 CFLAGS:=-ffreestanding -O2 -Wall -Wextra -nostdlib
-CPPFLAGS:=
 LIBS:=-lgcc
 
 OBJS:=\
@@ -17,9 +17,9 @@ myos.bin: $(OBJS) linker.ld
 	$(CC) -T linker.ld -Wl,--build-id=none -o $@ $(CFLAGS) $(OBJS) $(LIBS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS) $(CPPFLAGS)
+	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS)
 
-%.o: %.s
+%.o: %.asm
 	$(AS) $< -o $@
 
 clean:
