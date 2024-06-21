@@ -4,10 +4,12 @@
 
 #include "./vga/vga.h"
 #include "./gdt/gdt.h"
+#include "./idt/idt.h"
 
 void kernel_main(void) {
 	terminal_init();
 	gdt_init();
+	idt_init();
 	
-	terminal_writestring("gdt is done\n");
+	terminal_print("everything is working\n");
 }

@@ -9,8 +9,10 @@ boot.o \
 kernel.o \
 vga/vga.o \
 gdt/gdt.o \
-gdt/gdt_asm.o \
+gdt/gdt_s.o \
 util/util.o \
+idt/idt.o \
+idt/idt_s.o \
 
 all: myos.bin
 
