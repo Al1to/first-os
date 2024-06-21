@@ -1,0 +1,52 @@
+<mxfile host="app.diagrams.net" modified="2024-06-21T10:38:45.488Z" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0" etag="S9P0EZwvp5k00Jg6VLga" version="24.6.0" type="github">
+  <diagram name="Страница — 1" id="Gepx6zuMpUM6Tq9vefGh">
+    <mxGraphModel dx="478" dy="265" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ppdWqVHHxeLvMkOYX_ht-1" target="ppdWqVHHxeLvMkOYX_ht-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-1" value="&lt;div&gt;boot&amp;nbsp;&lt;/div&gt;&lt;div&gt;&amp;amp;&lt;br&gt;&lt;/div&gt;&lt;div&gt;kernel + vga&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=5;" vertex="1" parent="1">
+          <mxGeometry x="384" y="10" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="ppdWqVHHxeLvMkOYX_ht-2" target="ppdWqVHHxeLvMkOYX_ht-10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-2" value="GDT" style="rounded=0;whiteSpace=wrap;html=1;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="399" y="60" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-5" value="&lt;div style=&quot;font-size: 4px;&quot;&gt;Тут крч делаем по вот такой же структуре: &lt;font color=&quot;#3399ff&quot;&gt;https://wiki.osdev.org/Global_Descriptor_Table&lt;/font&gt;&lt;br&gt;там есть табличка в segment descriptor. По всей видимости нам надо сделать массив таких штук (по сути каждый дескриптор это uint64_t, где каждые байты в четком соответствии с табличкой выставляются при помощи битовых сдвигов). А потом указатель на этот массив надо отдать процу через инлайн асм инструкцию LGDT. Предлагаю расписать функции по типу initGDT, create_segdesk или как-то так&lt;br&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=4;" vertex="1" parent="1">
+          <mxGeometry x="436" y="55" width="200" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-6" value="Почти все готово, только я бы все что связано с vga, вынес бы в отденльный .h и .c файл" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=4;" vertex="1" parent="1">
+          <mxGeometry x="450" y="10" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="ppdWqVHHxeLvMkOYX_ht-10" target="ppdWqVHHxeLvMkOYX_ht-17">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="414" y="140" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="414" y="130" />
+              <mxPoint x="525" y="130" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-10" value="IDT" style="rounded=0;whiteSpace=wrap;html=1;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="399" y="100" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-15" value="Это тоже таблица дескрипторов, только теперь не сегментов, а прерываний (interrupt, отсюда же и int)" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=4;" vertex="1" parent="1">
+          <mxGeometry x="436" y="100" width="104" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-17" value="Дрова" style="rounded=0;whiteSpace=wrap;html=1;fontSize=7;" vertex="1" parent="1">
+          <mxGeometry x="510" y="140" width="30" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-19" value="Ваще хз, до этого еще тоже дожить надо, но, главное, сделать дрова под клавиатуру, а вот потом можно будет и разгуляться" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=4;" vertex="1" parent="1">
+          <mxGeometry x="548" y="140" width="104" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ppdWqVHHxeLvMkOYX_ht-20" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;Рефы:&lt;/font&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;https://youtu.be/pfWjteMpcxE?si=eyZ8hQP25cH0dc-4&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;https://youtu.be/jwulDRMQ53I?si=27o7ZttjCferr6sG&lt;br&gt;&lt;br&gt;https://wiki.osdev.org/GDT_Tutorial&lt;br&gt;&lt;/div&gt;" style="text;html=1;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#3399FF;fontSize=4;" vertex="1" parent="1">
+          <mxGeometry x="652" y="55" width="98" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
