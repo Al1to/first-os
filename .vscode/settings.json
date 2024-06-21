@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "vga.h": "c",
+        "stdint.h": "c",
+        "stddef.h": "c",
+        "stdbool.h": "c",
+        "gdt.h": "c",
+        "util.h": "c"
+    }
+}

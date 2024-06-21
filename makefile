@@ -1,4 +1,3 @@
-# AS:=as --32
 AS:=nasm -f elf32
 CC:=gcc -m32
 
@@ -8,6 +7,10 @@ LIBS:=-lgcc
 OBJS:=\
 boot.o \
 kernel.o \
+vga/vga.o \
+gdt/gdt.o \
+gdt/gdt_asm.o \
+util/util.o \
 
 all: myos.bin
 
