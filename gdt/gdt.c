@@ -1,6 +1,7 @@
 #include "gdt.h"
 
 extern void gdt_flush(uint32_t); 
+extern void tss_flush(uint32_t); 
 
 struct gdt_enrty gdt_entries[6];
 struct gdt_ptr gdt_ptr;
