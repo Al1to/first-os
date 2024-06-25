@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+#include "../util/util.h" 
+
 #ifndef IDT_H
 #define IDT_H
 
@@ -18,6 +20,9 @@ struct idt_ptr {
 
 void idt_init();
 void set_idt_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
+
+void irq_install_handler (int irq, void (*handler)(struct int_regs* regs));
+void irq_uninstall_handler (int irq);
 
 extern void isr0();
 extern void isr1();

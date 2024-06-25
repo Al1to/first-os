@@ -13,6 +13,7 @@ gdt/gdt_s.o \
 util/util.o \
 idt/idt.o \
 idt/idt_s.o \
+pit/pit.o \
 
 all: myos.bin
 

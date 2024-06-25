@@ -5,11 +5,12 @@
 #include "./vga/vga.h"
 #include "./gdt/gdt.h"
 #include "./idt/idt.h"
+#include "./pit/pit.h"
 
 void kernel_main(void) {
 	terminal_init();
 	gdt_init();
 	idt_init();
-	
-	terminal_print("everything is working\n");
+	pit_init();
+	for(;;);
 }

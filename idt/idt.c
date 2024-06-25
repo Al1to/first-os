@@ -78,8 +78,8 @@ void idt_init() {
     set_idt_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     set_idt_gate(47, (uint32_t)irq15, 0x08, 0x8E);
 
-    set_idt_gate(128, (uint32_t)isr30, 0x08, 0x8E);
-    set_idt_gate(177, (uint32_t)isr31, 0x08, 0x8E);
+    set_idt_gate(128, (uint32_t)isr128, 0x08, 0x8E);
+    set_idt_gate(177, (uint32_t)isr177, 0x08, 0x8E);
 
     idt_flush((uint32_t)&idt_ptr);
 }
@@ -156,6 +156,7 @@ void irq_handler (struct int_regs* regs) {
 
     if (handler) {
         handler(regs);
+        terminal_print("Slava gay");
     }
     if (regs->int_no >= 40) {
         out_port_b(0xA0, 0x20);
