@@ -9,7 +9,7 @@ void vga_scroll_up(void);
 void vga_new_line(void);
 
 void vga_print(const char* str);
-void vga_printf(const char* str, size_t d);
+void vga_printf(const char* str, int d);
 
 static inline uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
 	return fg | bg << 4;

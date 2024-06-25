@@ -5,7 +5,6 @@ const uint32_t freq = 100;
 
 void on_irq0(struct int_regs *regs) {
     ticks += 1;
-    vga_print("tick\n");
 }
 
 void pit_init() {

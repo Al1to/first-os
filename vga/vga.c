@@ -45,6 +45,9 @@ void vga_print(const char* str) {
 			case '\n':
 				vga_new_line();
 				break;
+			case '\r':
+				vga_column = 0;
+				break;
 			default:
 				if (vga_column == VGA_WIDTH) vga_new_line();
 				vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(*str, vga_color);
@@ -54,18 +57,28 @@ void vga_print(const char* str) {
 	}	
 }
 
-void vga_printf(const char* str, size_t d) {
-	while (*str) {
-		switch (*str) {
-			case '%':
-				uint16_t start = str;
-				++str;
-				if (*str == 'd') {
-					// TODO:
-				}
-				break;
-			default:
-				break;
+void vga_printf(const char* str, int d) {
+	while (*str) 
+	{
+		switch (*str)
+		{
+		case '%':
+			++str;
+			if (*str == 'd') {
+				char* num;
+				itoa(d, num);
+				vga_print(num);
+			} else {
+				--str;
+			}
+			break;
+		case '\n':
+			vga_new_line();
+			break;
+		default:
+			if (vga_column == VGA_WIDTH) vga_new_line();
+			vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(*str, vga_color);
+			break;
 		}
 		++str;
 	}

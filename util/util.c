@@ -8,7 +8,7 @@ void memset(void *dest, char val, uint32_t count) {
     }
 }
 
-char *itoa(size_t num, char *str, int base) {
+char *itoa(int num, char *str) {
     size_t i = 0;
     bool isNegative = false;
 
@@ -18,9 +18,9 @@ char *itoa(size_t num, char *str, int base) {
     }
 
     do {
-        int remainder = num % base;
-        str[i++] = (remainder < 10) ? (remainder + '0') : (remainder - 10 + 'A');
-        num /= base;
+        int remainder = num % 10;
+        str[i++] = (remainder + '0');
+        num /= 10;
     } while (num);
 
     if (isNegative) {
@@ -34,7 +34,7 @@ char *itoa(size_t num, char *str, int base) {
         str[k] = temp;
     }
 
-    return str;
+    return str; // + '\0'
 }
 
 void out_port_b(uint16_t port, uint8_t value) {

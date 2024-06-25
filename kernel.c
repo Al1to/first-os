@@ -13,7 +13,8 @@ void kernel_main(void) {
 	pit_init();
 	vga_print("PIT is done!\n");
 
-	vga_print("el psy congru.\n");
+	vga_printf("test: %d test test test \n", 1000-7);
 
+	vga_print("\nel psy congroo.\n");
 	while(1);
 }

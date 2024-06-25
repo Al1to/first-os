@@ -6,7 +6,7 @@
 // Заполняет первые count байтов области памяти, на которую указывает dest, байтом val
 void memset(void *dest, char val, uint32_t count);
 
-char *itoa(size_t num, char *str, int base);
+char *itoa(int num, char *str);
 
 void out_port_b(uint16_t port, uint8_t value);
 
