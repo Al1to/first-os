@@ -1,14 +1,12 @@
 #include "./idt.h"
-#include "../util/util.h"
-#include "../vga/vga.h"
 
 struct idt_entry idt_entries[256];
 struct idt_ptr idt_ptr;
 
 extern void idt_flush(uint32_t);
 
-void idt_init() {
-    idt_ptr.limit = (sizeof(struct idt_entry) * 256) - 1;
+void idt_init(void) {
+    idt_ptr.limit = sizeof(struct idt_entry) * 256 - 1;
     idt_ptr.base = (uint32_t) &idt_entries;
 
     memset(&idt_entries, 0, sizeof(struct idt_entry) * 256);
@@ -32,8 +30,8 @@ void idt_init() {
     set_idt_gate(1, (uint32_t)isr1, 0x08, 0x8E);
     set_idt_gate(2, (uint32_t)isr2, 0x08, 0x8E);
     set_idt_gate(3, (uint32_t)isr3, 0x08, 0x8E);
-    set_idt_gate(4, (uint32_t)isr4, 0x08, 0x8E);
-    set_idt_gate(5, (uint32_t)isr5, 0x08, 0x8E);
+    set_idt_gate(4, (uint32_t)isr4, 0x08, 0x8E); 
+    set_idt_gate(5, (uint32_t)isr5, 0x08, 0x8E); 
     set_idt_gate(6, (uint32_t)isr6, 0x08, 0x8E);
     set_idt_gate(7, (uint32_t)isr7, 0x08, 0x8E);
     set_idt_gate(8, (uint32_t)isr8, 0x08, 0x8E);
@@ -78,8 +76,8 @@ void idt_init() {
     set_idt_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     set_idt_gate(47, (uint32_t)irq15, 0x08, 0x8E);
 
-    set_idt_gate(128, (uint32_t)isr128, 0x08, 0x8E);
-    set_idt_gate(177, (uint32_t)isr177, 0x08, 0x8E);
+    set_idt_gate(128, (uint32_t)isr128, 0x08, 0x8E); // Sys calls
+    set_idt_gate(177, (uint32_t)isr177, 0x08, 0x8E); // Sys calls
 
     idt_flush((uint32_t)&idt_ptr);
 }
@@ -92,7 +90,7 @@ void set_idt_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt_entries[num].flags = flags | 0x60;
 }
 
-unsigned char* exception_msgs[] = {
+const char* exception_msgs[] = {
     "Division By Zero",
     "Debug",
     "Non Maskeble Interrupt",
@@ -129,10 +127,9 @@ unsigned char* exception_msgs[] = {
 
 void isr_handler(struct int_regs* regs) {
     if (regs->int_no < 32) {
-        terminal_print(exception_msgs[regs->int_no]);
-        terminal_print("\n");
-        terminal_print("Exception! System Halted!\n");
-        for(;;);
+        vga_print("\nException! System Halted!\n");
+        vga_print(exception_msgs[regs->int_no]);
+        while(1);
     }
 }
 
@@ -150,13 +147,12 @@ void irq_uninstall_handler (int irq) {
 }
 
 void irq_handler (struct int_regs* regs) {
-    void (*handler)(struct int_regs *regs);
+    void (*handler)(struct int_regs* regs);
 
     handler = irq_routines[regs->int_no - 32];
 
     if (handler) {
         handler(regs);
-        terminal_print("Slava gay");
     }
     if (regs->int_no >= 40) {
         out_port_b(0xA0, 0x20);

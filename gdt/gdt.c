@@ -1,7 +1,7 @@
 #include "gdt.h"
 
 extern void gdt_flush(uint32_t); 
-extern void tss_flush(uint32_t); 
+extern void tss_flush();
 
 struct gdt_enrty gdt_entries[6];
 struct gdt_ptr gdt_ptr;
@@ -11,16 +11,15 @@ void gdt_init() {
     gdt_ptr.limit = (sizeof(struct gdt_enrty) * 6) - 1;
     gdt_ptr.base = (uint32_t)&gdt_entries;
 
-    set_gdt_gate(0, 0, 0, 0, 0);
-    set_gdt_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);
-    set_gdt_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);
-    set_gdt_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);
-    set_gdt_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);
-
-    write_tss(5, 0x10, 0x0);
+    set_gdt_gate(0, 0, 0, 0, 0);                  // null
+    set_gdt_gate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);   // kernel .text
+    set_gdt_gate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);   // kernel .data
+    set_gdt_gate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);   // user .text
+    set_gdt_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);   // user .data
+    write_tss(5, 0x10, 0x0);                      // tss
 
     gdt_flush((uint32_t)&gdt_ptr);
-    tss_flush((uint32_t)&gdt_ptr);
+    tss_flush();
 }
 
 void set_gdt_gate(uint32_t num, uint32_t base, uint32_t limit,
