@@ -34,8 +34,11 @@ void vga_scroll_up(void) {
 }
 
 void vga_new_line(void) {
-	if (vga_row < VGA_HEIGHT - 1) ++vga_row;
-	else vga_scroll_up();
+	if (vga_row < VGA_HEIGHT - 1) {
+		++vga_row;
+	} else {
+		vga_scroll_up();
+	}
 	vga_column = 0;
 }
 
@@ -46,6 +49,20 @@ void vga_put_char(char ch) {
 			break;
 		case '\r':
 			vga_column = 0;
+			break;
+		case '\b':
+			if (vga_column == 0 && vga_row != 0)
+			{
+				--vga_row;
+				vga_column = VGA_WIDTH;
+			}
+			vga_buffer[vga_row * VGA_WIDTH + (--vga_column)] = vga_entry(' ', vga_color);
+			break;
+		case '\t':
+			uint16_t tab_len = 4 - (vga_column % 4);
+			while (tab_len != 0) {
+				vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(' ', vga_color);
+			}
 			break;
 		default:
 			if (vga_column == VGA_WIDTH) vga_new_line();
@@ -69,7 +86,11 @@ void vga_printf(const char* str, int n) {
 				++str;
 				if (*str == 'd') {
 					char* num;
-					itoa(n, num);
+					itoa(n, num, 10);
+					vga_print(num);
+				} else if (*str == 'x') {
+					char* num;
+					itoa(n, num, 16);
 					vga_print(num);
 				} else if(*str == 'c') {
 					vga_put_char(n);

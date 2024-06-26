@@ -11,5 +11,7 @@
 #include "./pit/pit.h"
 #include "./util/util.h"
 #include "./drivers/keyboard/keyboard.h"
+#include "./multiboot.h"
+#include "./memory/memory.h"
 
 #endif

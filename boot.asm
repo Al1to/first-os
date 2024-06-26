@@ -21,7 +21,10 @@ global _start:function (_start.end - _start)
 _start:
 	mov esp, stack_top
 
-	extern kernel_main
+	push ebx
+	push eax
+	
+	extern kernel_main 
 	call kernel_main
 
 	cli

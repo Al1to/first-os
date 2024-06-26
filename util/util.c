@@ -8,33 +8,37 @@ void memset(void *dest, char val, uint32_t count) {
     }
 }
 
-char *itoa(int num, char *str) {
-    size_t i = 0;
-    bool isNegative = false;
-
-    if (num < 0) {
-        isNegative = true;
-        num = -num;
+void itoa(int num, char *str, int base) {
+    int i = 0;
+    bool is_negative = false;
+    if (base == 10) {
+        is_negative = num < 0;
+        if (is_negative) {
+            num = -num;
+        }
     }
 
     do {
-        int remainder = num % 10;
-        str[i++] = (remainder + '0');
-        num /= 10;
+        int digit = num % base;
+        if (digit < 10) {
+            str[i++] = digit + '0';
+        } else {
+            str[i++] = digit - 10 + 'A';
+        }
+        num /= base;
     } while (num);
 
-    if (isNegative) {
+    if (is_negative) {
         str[i++] = '-';
     }
 
     str[i] = '\0';
-    for (int j = 0, k = i - 1; j < k; ++j, --k) {
-        char temp = str[j];
-        str[j] = str[k];
-        str[k] = temp;
-    }
 
-    return str; // + '\0'
+    for (int j = 0; j < i / 2; j++) {
+        char temp = str[j];
+        str[j] = str[i - j - 1];
+        str[i - j - 1] = temp;
+    }
 }
 
 void out_port_b(uint16_t port, uint8_t value) {

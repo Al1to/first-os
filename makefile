@@ -15,6 +15,7 @@ idt/idt.o \
 idt/idt_s.o \
 pit/pit.o \
 drivers/keyboard/keyboard.o \
+memory/memory.o \
 
 all: myos.bin
 
