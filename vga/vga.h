@@ -8,6 +8,7 @@ void vga_init(void);
 void vga_scroll_up(void);
 void vga_new_line(void);
 
+void vga_put_char(char ch);
 void vga_print(const char* str);
 void vga_printf(const char* str, int d);
 

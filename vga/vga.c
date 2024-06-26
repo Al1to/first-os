@@ -39,46 +39,51 @@ void vga_new_line(void) {
 	vga_column = 0;
 }
 
+void vga_put_char(char ch) {
+	switch (ch) {
+		case '\n':
+			vga_new_line();
+			break;
+		case '\r':
+			vga_column = 0;
+			break;
+		default:
+			if (vga_column == VGA_WIDTH) vga_new_line();
+			vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(ch, vga_color);
+			break;
+	}
+}
+
 void vga_print(const char* str) {
 	while (*str) {
+		vga_put_char(*str);
+		++str;
+	}
+}	
+
+void vga_printf(const char* str, int n) {
+	while (*str) 
+	{
 		switch (*str) {
+			case '%':
+				++str;
+				if (*str == 'd') {
+					char* num;
+					itoa(n, num);
+					vga_print(num);
+				} else if(*str == 'c') {
+					vga_put_char(n);
+				} else {
+					--str;
+				}
+				break;
 			case '\n':
 				vga_new_line();
-				break;
-			case '\r':
-				vga_column = 0;
 				break;
 			default:
 				if (vga_column == VGA_WIDTH) vga_new_line();
 				vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(*str, vga_color);
 				break;
-		}
-		++str;
-	}	
-}
-
-void vga_printf(const char* str, int d) {
-	while (*str) 
-	{
-		switch (*str)
-		{
-		case '%':
-			++str;
-			if (*str == 'd') {
-				char* num;
-				itoa(d, num);
-				vga_print(num);
-			} else {
-				--str;
-			}
-			break;
-		case '\n':
-			vga_new_line();
-			break;
-		default:
-			if (vga_column == VGA_WIDTH) vga_new_line();
-			vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(*str, vga_color);
-			break;
 		}
 		++str;
 	}

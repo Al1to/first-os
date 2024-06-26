@@ -10,5 +10,6 @@
 #include "./idt/idt.h"
 #include "./pit/pit.h"
 #include "./util/util.h"
+#include "./drivers/keyboard/keyboard.h"
 
 #endif

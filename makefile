@@ -14,6 +14,7 @@ util/util.o \
 idt/idt.o \
 idt/idt_s.o \
 pit/pit.o \
+drivers/keyboard/keyboard.o \
 
 all: myos.bin
 

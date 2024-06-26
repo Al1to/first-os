@@ -6,9 +6,11 @@
 // Заполняет первые count байтов области памяти, на которую указывает dest, байтом val
 void memset(void *dest, char val, uint32_t count);
 
+// Переводит из числа в строку
 char *itoa(int num, char *str);
 
 void out_port_b(uint16_t port, uint8_t value);
+char in_port_b(uint16_t port);
 
 struct int_regs {
     uint32_t cr2;
