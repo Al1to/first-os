@@ -8,37 +8,60 @@ void memset(void *dest, char val, uint32_t count) {
     }
 }
 
-void itoa(int num, char *str, int base) {
-    int i = 0;
-    bool is_negative = false;
-    if (base == 10) {
-        is_negative = num < 0;
-        if (is_negative) {
-            num = -num;
-        }
+unsigned long long pow(unsigned long long number, int degree) {
+    if (number == 0)
+        return 1;
+
+    if (degree == 0)
+        return 1;
+
+    return number * pow(number, degree-1);
+} 
+
+unsigned int get_digits(unsigned long long number, const int base) {
+    unsigned int digits = 0;
+    for (number; number > 0; number /= base) ++digits;
+    return digits;
+}
+
+void itoa(unsigned long number, char *str, const unsigned int base) {
+    int cur = 0;
+
+    if (base < 2) {
+        str[cur] = '\0';
+        return;
     }
 
-    do {
-        int digit = num % base;
-        if (digit < 10) {
-            str[i++] = digit + '0';
+    if (number == 0) {
+        str[cur++] = '0';
+        str[cur] = '\0';
+        return;
+    }
+
+    unsigned long long num;
+    if (base == 10 && num < 0) {
+        str[cur++] = '-';
+        num = -number;
+    } else if (base == 16) {
+        // str[cur++] = '0';
+        // str[cur++] = 'x';
+        num = number;
+    } else { 
+        num = number; 
+    }
+
+    int digits = get_digits(num, base);
+
+    for (unsigned long digit; digits > 0; --digits) {
+        digit = num / pow(base, digits - 1);
+        if (digit < 10) {                  
+            str[cur++] = digit + '0';
         } else {
-            str[i++] = digit - 10 + 'A';
+            str[cur++] = digit + 'A' - 10;
         }
-        num /= base;
-    } while (num);
-
-    if (is_negative) {
-        str[i++] = '-';
+        num %= pow(base, digits - 1);
     }
-
-    str[i] = '\0';
-
-    for (int j = 0; j < i / 2; j++) {
-        char temp = str[j];
-        str[j] = str[i - j - 1];
-        str[i - j - 1] = temp;
-    }
+    str[cur] = '\0';
 }
 
 void out_port_b(uint16_t port, uint8_t value) {

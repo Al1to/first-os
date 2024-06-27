@@ -7,6 +7,7 @@ void kernel_main(uint32_t, struct multiboot_info* boot_info) {
 	pit_init();
 	keyboard_init();
 	memory_init(boot_info);
-	vga_print("\nel psy congroo.\n$ ");
-	while(1);
+
+	vga_print("\nel psy congroo.\n");
+	while(true);
 }

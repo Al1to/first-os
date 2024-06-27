@@ -73,8 +73,7 @@ void vga_put_char(char ch) {
 
 void vga_print(const char* str) {
 	while (*str) {
-		vga_put_char(*str);
-		++str;
+		vga_put_char(*str++);
 	}
 }	
 
