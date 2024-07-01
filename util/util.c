@@ -52,7 +52,7 @@ void itoa(unsigned long number, char *str, const unsigned int base) {
 
     int digits = get_digits(num, base);
 
-    for (unsigned long digit; digits > 0; --digits) {
+    for (unsigned long digit; digits > 0; --digits) { 
         digit = num / pow(base, digits - 1);
         if (digit < 10) {                  
             str[cur++] = digit + '0';

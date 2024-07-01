@@ -7,7 +7,7 @@
 void memset(void *dest, char val, uint32_t count);
 
 // Переводит из числа в строку
-void itoa(unsigned long number, char *str, const unsigned int base);
+void itoa(unsigned long number, char *str, const unsigned int base); 
 
 void out_port_b(uint16_t port, uint8_t value);
 char in_port_b(uint16_t port);
