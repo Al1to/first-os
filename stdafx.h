@@ -13,5 +13,6 @@
 #include "./drivers/keyboard/keyboard.h"
 #include "./multiboot.h"
 #include "./memory/memory.h"
+#include "./kmalloc/kmalloc.h"
 
 #endif

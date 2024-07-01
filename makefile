@@ -16,6 +16,7 @@ idt/idt_s.o \
 pit/pit.o \
 drivers/keyboard/keyboard.o \
 memory/memory.o \
+kmalloc/kmalloc.o \
 
 all: myos.bin
 
