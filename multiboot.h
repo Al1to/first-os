@@ -1,5 +1,3 @@
-#include "./stdafx.h"
-
 struct multiboot_aout_symbol_table {
     uint32_t tabsize;
     uint32_t strsize;

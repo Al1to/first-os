@@ -22,10 +22,10 @@ all: myos.bin
 .PHONEY: all clean iso run-qemu
 
 myos.bin: $(OBJS) linker.ld
-	$(CC) -T linker.ld -Wl,--build-id=none -o $@ $(CFLAGS) $(OBJS) $(LIBS)
+	$(CC) -T linker.ld -fno-pic -Wl,--build-id=none -o $@ $(CFLAGS) $(OBJS) $(LIBS)
 
 %.o: %.c
-	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS)
+	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS) -fno-pic
 
 %.o: %.asm
 	$(AS) $< -o $@

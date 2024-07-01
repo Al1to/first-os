@@ -5,7 +5,7 @@ void kernel_main(uint32_t, struct multiboot_info* boot_info) {
 	gdt_init();
 	idt_init();
 	pit_init();
-	//memory_init(boot_info);
+	// memory_init(boot_info);
 	keyboard_init();
 
 	vga_print("el psy congroo.\n");
