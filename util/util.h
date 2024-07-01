@@ -12,6 +12,8 @@ void itoa(unsigned long number, char *str, const unsigned int base);
 void out_port_b(uint16_t port, uint8_t value);
 char in_port_b(uint16_t port);
 
+#define CEIL_DIV(a, b) ((a + b - 1) / b)
+
 struct int_regs {
     uint32_t cr2;
     uint32_t ds;
