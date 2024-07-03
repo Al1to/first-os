@@ -19,6 +19,16 @@ void vga_init(void) {
 			vga_buffer[index] = vga_entry(' ', vga_color); 
 		}
 	}
+	vga_update_cursor();
+}
+
+void vga_update_cursor() {
+	uint16_t pos = vga_row * VGA_WIDTH + vga_column;
+
+	out_port_b(0x3D4, 0x0F);
+	out_port_b(0x3D5, (uint8_t) (pos & 0xFF));
+	out_port_b(0x3D4, 0x0E);
+	out_port_b(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
 void vga_scroll_up(void) {
@@ -40,6 +50,7 @@ void vga_new_line(void) {
 		vga_scroll_up();
 	}
 	vga_column = 0;
+	vga_update_cursor();
 }
 
 void vga_put_char(char ch) {
@@ -49,6 +60,7 @@ void vga_put_char(char ch) {
 			break;
 		case '\r':
 			vga_column = 0;
+			vga_update_cursor();
 			break;
 		case '\b':
 			if (vga_column == 0 && vga_row != 0)
@@ -57,16 +69,19 @@ void vga_put_char(char ch) {
 				vga_column = VGA_WIDTH;
 			}
 			vga_buffer[vga_row * VGA_WIDTH + (--vga_column)] = vga_entry(' ', vga_color);
+			vga_update_cursor();
 			break;
 		case '\t':
 			uint16_t tab_len = 4 - (vga_column % 4);
 			while (tab_len != 0) {
 				vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(' ', vga_color);
 			}
+			vga_update_cursor();
 			break;
 		default:
 			if (vga_column == VGA_WIDTH) vga_new_line();
 			vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(ch, vga_color);
+			vga_update_cursor();
 			break;
 	}
 }
@@ -75,6 +90,7 @@ void vga_print(const char* str) {
 	while (*str) {
 		vga_put_char(*str++);
 	}
+	vga_update_cursor();
 }	
 
 void vga_printf(const char* str, int n) {
@@ -107,4 +123,5 @@ void vga_printf(const char* str, int n) {
 		}
 		++str;
 	}
+	vga_update_cursor();
 }

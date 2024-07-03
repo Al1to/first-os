@@ -47,7 +47,7 @@ higher_half:
 	push eax
 	xor ebp, ebp
 
-	extern kernel_main    ; from kernel.c
+	extern kernel_main    ; из kernel.c
 	call kernel_main
 
 halt:
