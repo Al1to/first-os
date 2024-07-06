@@ -3,6 +3,12 @@
 #ifndef GDT_H
 #define GDT_H
 
+/*/
+ *   gdt - ...
+ * 
+/*/
+
+// ↓ сам дескриптор
 struct gdt_enrty {
     uint16_t limit;
     uint16_t base_low;
@@ -12,11 +18,13 @@ struct gdt_enrty {
     uint8_t base_high;
 } __attribute__((packed));
 
+// ↓ указатель на дескриптор
 struct gdt_ptr {
     uint16_t limit;
     unsigned int base;
 }__attribute__((packed));
 
+// ↓ ...
 struct tss_entry {
     uint32_t prev_tss;
     uint32_t esp0;
