@@ -1,14 +1,16 @@
 #include "stdafx.h"
 
+extern int_0x80_dbg();
+
 void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
 	// | это 3 базовых инита + 2 для графики и ввода, порядок именно такой
 	// ↓ их описания в соответствующих файлах
-	vga_init(); 	  // ← не обязателен
+	vga_init();
 	gdt_init();
 	idt_init();
 	pit_init();
-	keyboard_init();  // ← не обязателен
+	keyboard_init();
 
 	// | mods_addr - это адрес старта какого-то там модуля (сам хз пока что)
 	// | +4 т.к. там первые 4 байта хранят че-то ненужное нам
@@ -17,7 +19,7 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 	uint32_t mod1 = *(uint32_t*)(boot_info->mods_addr + 4);
 	
 	// | по сути из 0x1000 делает 0x1000, а из 0x1234 делает 0x2000
-	// ↓ из 0x2345 делает 0x3000, думаю ты понял (выравнивает по 4кб, (0x1000 - это 4кб)) 
+	// ↓ из 0x2345 делает 0x3000, думаю ты понял (выравнивает по 4кб, (0x1000 - это 4кб))
 	uint32_t phys_alloc_start = (mod1 + 0xFFF) & ~0xFFF;
 	
 	// | что делает этот инит, описано в соответствующих файлах
@@ -32,5 +34,8 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 	// | принт просто по приколу, а цикл, чтобы не выбрасывало обратно в бутлоадер
 	// ↓ если выбросит, то перестанет работать ввод с клавиатуры
 	vga_print("el psy congroo.\n");
+
+	int_0x80_dbg(4); // exception page fault
+
 	while(1);
 }

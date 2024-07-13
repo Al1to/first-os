@@ -4,6 +4,7 @@ struct idt_entry idt_entries[256];
 struct idt_ptr idt_ptr;
 
 extern void idt_flush(uint32_t);
+extern void syscall_handler();
 
 void idt_init(void) {
     idt_ptr.limit = sizeof(struct idt_entry) * 256 - 1;
@@ -76,8 +77,10 @@ void idt_init(void) {
     set_idt_gate(46, (uint32_t)irq14, 0x08, 0x8E);
     set_idt_gate(47, (uint32_t)irq15, 0x08, 0x8E);
 
-    set_idt_gate(128, (uint32_t)isr128, 0x08, 0x8E); // Sys calls
-    set_idt_gate(177, (uint32_t)isr177, 0x08, 0x8E); // Sys calls
+    set_idt_gate(80, (uint32_t)syscall_handler, 0x08, 0x8E);  // int 0x80
+
+    set_idt_gate(128, (uint32_t)isr128, 0x08, 0x8E); 
+    set_idt_gate(177, (uint32_t)isr177, 0x08, 0x8E);
 
     idt_flush((uint32_t)&idt_ptr);
 }

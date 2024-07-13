@@ -30,9 +30,11 @@ void vga_scroll_up(void);
 // ↓ переносит курсор, если это была последняя строка, то вызывает vga_scroll_up
 void vga_new_line(void);
 
-// ↓ все три - это различные методы вывода на экран символов
+// ↓ все четыре - это различные методы вывода на экран символов
 void vga_put_char(char ch);
+void vga_put_charс(uint8_t color, char ch);
 void vga_print(const char* str);
+void vga_printс(uint8_t color, const char* str);
 void vga_printf(const char* str, int d);
 
 // | принимает цвет символа и цвет фона

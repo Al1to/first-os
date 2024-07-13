@@ -86,12 +86,51 @@ void vga_put_char(char ch) {
 	}
 }
 
+void vga_put_charс(uint8_t color, char ch) {
+	switch (ch) {
+		case '\n':
+			vga_new_line();
+			break;
+		case '\r':
+			vga_column = 0;
+			vga_update_cursor();
+			break;
+		case '\b':
+			if (vga_column == 0 && vga_row != 0)
+			{
+				--vga_row;
+				vga_column = VGA_WIDTH;
+			}
+			vga_buffer[vga_row * VGA_WIDTH + (--vga_column)] = vga_entry(' ', color);
+			vga_update_cursor();
+			break;
+		case '\t':
+			uint16_t tab_len = 4 - (vga_column % 4);
+			while (tab_len != 0) {
+				vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(' ', color);
+			}
+			vga_update_cursor();
+			break;
+		default:
+			if (vga_column == VGA_WIDTH) vga_new_line();
+			vga_buffer[vga_row * VGA_WIDTH + (vga_column++)] = vga_entry(ch, color);
+			vga_update_cursor();
+			break;
+	}
+}
+
 void vga_print(const char* str) {
 	while (*str) {
 		vga_put_char(*str++);
 	}
-	vga_update_cursor();
 }	
+
+void vga_printс(uint8_t color, const char* str) {
+	uint8_t vga_printc_color = vga_entry_color(color, 0);
+	while (*str) {
+		vga_put_charс(vga_printc_color, *str++);
+	}
+}
 
 void vga_printf(const char* str, int n) {
 	while (*str) 

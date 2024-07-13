@@ -14,5 +14,6 @@
 #include "./multiboot.h"
 #include "./memory/memory.h"
 #include "./kmalloc/kmalloc.h"
+#include "./syscalls/ivt/ivt.h"
 
 #endif

@@ -17,6 +17,9 @@ pit/pit.o \
 drivers/keyboard/keyboard.o \
 memory/memory.o \
 kmalloc/kmalloc.o \
+syscalls/int_0x80.o \
+syscalls/ivt/ivt.o \
+int_0x80_dbg.o \
 
 all: myos.bin
 

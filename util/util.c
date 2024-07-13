@@ -8,7 +8,7 @@ void memset(void *dest, char val, uint32_t count) {
     }
 }
 
-unsigned long long pow(unsigned long long number, int degree) {
+uint64_t pow(uint64_t number, uint8_t degree) {
     if (number == 0)
         return 1;
 
@@ -18,7 +18,7 @@ unsigned long long pow(unsigned long long number, int degree) {
     return number * pow(number, degree-1);
 } 
 
-unsigned int get_digits(unsigned long long number, const int base) {
+unsigned int get_digits(uint64_t number, const int base) {
     unsigned int digits = 0;
     for (number; number > 0; number /= base) ++digits;
     return digits;
