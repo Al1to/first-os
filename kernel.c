@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-extern int_0x80_dbg();
+extern int_0x80_dbg(uint32_t num);
 
 void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
