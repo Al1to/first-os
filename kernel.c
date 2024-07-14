@@ -31,7 +31,6 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 	// ↓ 0x1000 это 4096 (4кб), т.е. размер страницы, которою выделит kmalloc для ядра
 	kmalloc_init(0x1000);
 
-	// int_0x80_dbg();
 	syscall_dbg();
 
 	// | принт просто по приколу, а цикл, чтобы не выбрасывало обратно в бутлоадер

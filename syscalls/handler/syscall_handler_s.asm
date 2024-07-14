@@ -2,6 +2,8 @@ extern syscall_handler
 global syscall_common_stub
 syscall_common_stub:
     cli
+    push long 0
+    push long 0x80
 
     pusha
     mov eax, ds
@@ -18,7 +20,7 @@ syscall_common_stub:
     push esp
     call syscall_handler
 
-    add esp, 8 ; вот тут, или дальше, general protection fault 
+    add esp, 8
     pop ebx
     mov ds, bx
     mov es, bx

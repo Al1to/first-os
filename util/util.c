@@ -75,6 +75,6 @@ char in_port_b(uint16_t port) {
 }
 
 void syscall_dbg() {
-  asm volatile ("mov $0x4, %%eax" : : : "eax"); 
+  asm volatile ("mov $0x4, %%eax" : : : "eax"); // 0x4 просто для теста, пофиг какой сисколл
   asm volatile ("int $0x80" : : : );
 }

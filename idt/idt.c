@@ -79,9 +79,6 @@ void idt_init(void) {
 
     set_idt_gate(0x80, (uint32_t)syscall_common_stub, 0x08, 0x8E);  // int 0x80
 
-    // set_idt_gate(128, (uint32_t)isr128, 0x08, 0x8E); 
-    set_idt_gate(177, (uint32_t)isr177, 0x08, 0x8E);
-
     idt_flush((uint32_t)&idt_ptr);
 }
 
