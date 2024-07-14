@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-extern int_0x80_dbg(uint32_t num);
+extern int_0x80_dbg();
 
 void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
@@ -31,11 +31,12 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 	// ↓ 0x1000 это 4096 (4кб), т.е. размер страницы, которою выделит kmalloc для ядра
 	kmalloc_init(0x1000);
 
+	// int_0x80_dbg();
+	syscall_dbg();
+
 	// | принт просто по приколу, а цикл, чтобы не выбрасывало обратно в бутлоадер
 	// ↓ если выбросит, то перестанет работать ввод с клавиатуры
 	vga_print("el psy congroo.\n");
-
-	int_0x80_dbg(4); // exception page fault
 
 	while(1);
 }

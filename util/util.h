@@ -13,6 +13,8 @@ void itoa(unsigned long number, char *str, const unsigned int base);
 void out_port_b(uint16_t port, uint8_t value);
 char in_port_b(uint16_t port);
 
+void syscall_dbg();
+
 // ↓ деление с округлением вверх, например, a=10 и b=3 получится 4
 #define CEIL_DIV(a, b) ((a + b - 1) / b)
 

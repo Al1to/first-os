@@ -73,3 +73,8 @@ char in_port_b(uint16_t port) {
     asm volatile ("inb %1, %0": "=a"(rv):"dN"(port));
     return rv;
 }
+
+void syscall_dbg() {
+  asm volatile ("mov $0x4, %%eax" : : : "eax"); 
+  asm volatile ("int $0x80" : : : );
+}
