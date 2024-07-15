@@ -1,4 +1,4 @@
-#include "../stdafx.h"
+#include "../../stdafx.h"
 
 #ifndef PIT_H
 #define PIT_H 

@@ -27,16 +27,16 @@ void idt_init(void) {
     out_port_b(0x21, 0x00);
     out_port_b(0xA1, 0x00);
 
-    set_idt_gate(0, (uint32_t)isr0, 0x08, 0x8E);
-    set_idt_gate(1, (uint32_t)isr1, 0x08, 0x8E);
-    set_idt_gate(2, (uint32_t)isr2, 0x08, 0x8E);
-    set_idt_gate(3, (uint32_t)isr3, 0x08, 0x8E);
-    set_idt_gate(4, (uint32_t)isr4, 0x08, 0x8E); 
-    set_idt_gate(5, (uint32_t)isr5, 0x08, 0x8E); 
-    set_idt_gate(6, (uint32_t)isr6, 0x08, 0x8E);
-    set_idt_gate(7, (uint32_t)isr7, 0x08, 0x8E);
-    set_idt_gate(8, (uint32_t)isr8, 0x08, 0x8E);
-    set_idt_gate(9, (uint32_t)isr9, 0x08, 0x8E);
+    set_idt_gate(0,  (uint32_t)isr0,  0x08, 0x8E);
+    set_idt_gate(1,  (uint32_t)isr1,  0x08, 0x8E);
+    set_idt_gate(2,  (uint32_t)isr2,  0x08, 0x8E);
+    set_idt_gate(3,  (uint32_t)isr3,  0x08, 0x8E);
+    set_idt_gate(4,  (uint32_t)isr4,  0x08, 0x8E); 
+    set_idt_gate(5,  (uint32_t)isr5,  0x08, 0x8E); 
+    set_idt_gate(6,  (uint32_t)isr6,  0x08, 0x8E);
+    set_idt_gate(7,  (uint32_t)isr7,  0x08, 0x8E);
+    set_idt_gate(8,  (uint32_t)isr8,  0x08, 0x8E);
+    set_idt_gate(9,  (uint32_t)isr9,  0x08, 0x8E);
     set_idt_gate(10, (uint32_t)isr10, 0x08, 0x8E);
     set_idt_gate(11, (uint32_t)isr11, 0x08, 0x8E);
     set_idt_gate(12, (uint32_t)isr12, 0x08, 0x8E);
@@ -60,22 +60,22 @@ void idt_init(void) {
     set_idt_gate(30, (uint32_t)isr30, 0x08, 0x8E);
     set_idt_gate(31, (uint32_t)isr31, 0x08, 0x8E);
 
-    set_idt_gate(32, (uint32_t)irq0, 0x08, 0x8E);
-    set_idt_gate(33, (uint32_t)irq1, 0x08, 0x8E);
-    set_idt_gate(34, (uint32_t)irq2, 0x08, 0x8E);
-    set_idt_gate(35, (uint32_t)irq3, 0x08, 0x8E);
-    set_idt_gate(36, (uint32_t)irq4, 0x08, 0x8E);
-    set_idt_gate(37, (uint32_t)irq5, 0x08, 0x8E);
-    set_idt_gate(38, (uint32_t)irq6, 0x08, 0x8E);
-    set_idt_gate(39, (uint32_t)irq7, 0x08, 0x8E);
-    set_idt_gate(40, (uint32_t)irq8, 0x08, 0x8E);
-    set_idt_gate(41, (uint32_t)irq9, 0x08, 0x8E);
-    set_idt_gate(42, (uint32_t)irq10, 0x08, 0x8E);
-    set_idt_gate(43, (uint32_t)irq11, 0x08, 0x8E);
-    set_idt_gate(44, (uint32_t)irq12, 0x08, 0x8E);
-    set_idt_gate(45, (uint32_t)irq13, 0x08, 0x8E);
-    set_idt_gate(46, (uint32_t)irq14, 0x08, 0x8E);
-    set_idt_gate(47, (uint32_t)irq15, 0x08, 0x8E);
+    set_idt_gate(32, (uint32_t)irq0,  0x08, 0x8E);    // pit
+    set_idt_gate(33, (uint32_t)irq1,  0x08, 0x8E);    //
+    set_idt_gate(34, (uint32_t)irq2,  0x08, 0x8E);    //
+    set_idt_gate(35, (uint32_t)irq3,  0x08, 0x8E);    //
+    set_idt_gate(36, (uint32_t)irq4,  0x08, 0x8E);    //
+    set_idt_gate(37, (uint32_t)irq5,  0x08, 0x8E);    //
+    set_idt_gate(38, (uint32_t)irq6,  0x08, 0x8E);    //
+    set_idt_gate(39, (uint32_t)irq7,  0x08, 0x8E);    //
+    set_idt_gate(40, (uint32_t)irq8,  0x08, 0x8E);    //
+    set_idt_gate(41, (uint32_t)irq9,  0x08, 0x8E);    //
+    set_idt_gate(42, (uint32_t)irq10, 0x08, 0x8E);    //
+    set_idt_gate(43, (uint32_t)irq11, 0x08, 0x8E);    //
+    set_idt_gate(44, (uint32_t)irq12, 0x08, 0x8E);    //
+    set_idt_gate(45, (uint32_t)irq13, 0x08, 0x8E);    //
+    set_idt_gate(46, (uint32_t)irq14, 0x08, 0x8E);    // 1 ata  // это че-то там шины
+    set_idt_gate(47, (uint32_t)irq15, 0x08, 0x8E);    // 2 ata
 
     set_idt_gate(0x80, (uint32_t)syscall_common_stub, 0x08, 0x8E);  // int 0x80
 

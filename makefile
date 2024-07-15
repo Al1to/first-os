@@ -20,6 +20,8 @@ kmalloc/kmalloc.o \
 syscalls/handler/syscall_handler.o \
 syscalls/handler/syscall_handler_s.o \
 syscalls/ivt/ivt.o \
+drivers/ata/ata.o \
+drivers/ata/ata_s.o \
 
 all: myos.bin
 

@@ -8,12 +8,13 @@
 #include "./vga/vga.h"
 #include "./gdt/gdt.h"
 #include "./idt/idt.h"
-#include "./pit/pit.h"
+#include "./drivers/pit/pit.h"
 #include "./util/util.h"
 #include "./drivers/keyboard/keyboard.h"
 #include "./multiboot.h"
 #include "./memory/memory.h"
 #include "./kmalloc/kmalloc.h"
 #include "./syscalls/ivt/ivt.h"
+#include "./drivers/ata/ata.h"
 
 #endif

@@ -1,10 +1,8 @@
 #include "stdafx.h"
 
-extern int_0x80_dbg();
-
 void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
-	// | это 3 базовых инита + 2 для графики и ввода, порядок именно такой
+	// | это 3 базовых инита + 2 для графики (vga) и ввода (keyboard), порядок именно такой
 	// ↓ их описания в соответствующих файлах
 	vga_init();
 	gdt_init();
