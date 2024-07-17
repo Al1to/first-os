@@ -13,15 +13,17 @@ gdt/gdt_s.o \
 util/util.o \
 idt/idt.o \
 idt/idt_s.o \
-pit/pit.o \
+pci/pci.o \
+drivers/pit/pit.o \
 drivers/keyboard/keyboard.o \
 memory/memory.o \
 kmalloc/kmalloc.o \
 syscalls/handler/syscall_handler.o \
 syscalls/handler/syscall_handler_s.o \
 syscalls/ivt/ivt.o \
-drivers/ata/ata.o \
-drivers/ata/ata_s.o \
+drivers/disk/ahci/ahci.o \
+# drivers/disk/ata/ata.o \
+# drivers/disk/ata/ata_s.o \
 
 all: myos.bin
 

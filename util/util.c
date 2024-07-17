@@ -68,10 +68,30 @@ void out_port_b(uint16_t port, uint8_t value) {
     asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
 }
 
-char in_port_b(uint16_t port) {
-    char rv;
-    asm volatile ("inb %1, %0": "=a"(rv):"dN"(port));
-    return rv;
+void out_port_w(uint16_t port, uint16_t value) {
+	asm volatile("outw %%ax, %%dx": :"d" (port), "a" (value));
+}
+
+void out_port_l(uint16_t port, uint32_t value) {
+	asm volatile("outl %%eax, %%dx": :"d" (port), "a" (value));
+}
+
+uint8_t in_port_b(uint16_t port) {
+    uint8_t ret;
+    asm volatile ("inb %1, %0": "=a"(ret):"dN"(port));
+    return ret;
+}
+
+uint16_t in_port_w(uint16_t port) {
+	uint16_t ret;
+	asm volatile("inw %%dx, %%ax":"=a"(ret):"d"(port));
+	return ret;
+}
+
+uint32_t in_port_l(uint16_t port) {
+	uint32_t ret;
+	asm volatile("inl %%dx, %%eax":"=a"(ret):"d"(port));
+	return ret;
 }
 
 void syscall_dbg() {

@@ -1,4 +1,10 @@
-global read_ata_st
+dd_dcr equ 0
+dd_stLBA equ 16
+dd_prtlen equ 48
+dd_sbits equ 80
+dd_tf equ 0 ; ??? я хз че это, какой-то task file
+
+; global read_ata_st
 read_ata_st:
 	push edx
 	push ecx

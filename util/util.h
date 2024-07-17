@@ -9,9 +9,13 @@ void memset(void *dest, char val, uint32_t count);
 // ↓ переводит из числа в строку
 void itoa(unsigned long number, char *str, const unsigned int base); 
 
-// ↓ обе функции это просто сишные обертки для асм инструкций outb и inb
+// ↓ эти функции - это просто сишные обертки для асм инструкций out и in
+void out_port_l(uint16_t port, uint32_t value);
+void out_port_w(uint16_t port, uint16_t value);
 void out_port_b(uint16_t port, uint8_t value);
-char in_port_b(uint16_t port);
+uint32_t in_port_l(uint16_t port);
+uint16_t in_port_w(uint16_t port);
+uint8_t  in_port_b(uint16_t port);
 
 void syscall_dbg();
 
