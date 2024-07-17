@@ -7,13 +7,13 @@ LIBS:=-lgcc
 OBJS:=\
 boot.o \
 kernel.o \
+pci/pci.o \
 vga/vga.o \
 gdt/gdt.o \
 gdt/gdt_s.o \
 util/util.o \
 idt/idt.o \
 idt/idt_s.o \
-pci/pci.o \
 drivers/pit/pit.o \
 drivers/keyboard/keyboard.o \
 memory/memory.o \

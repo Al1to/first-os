@@ -1,4 +1,4 @@
-#include "vga.h"
+#include "./vga.h"
 
 static const size_t VGA_WIDTH = 80;
 static const size_t VGA_HEIGHT = 25;
@@ -7,6 +7,24 @@ size_t vga_row;
 size_t vga_column;
 uint8_t vga_color;
 uint16_t* vga_buffer; 
+
+void print_pci_vga_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
+	// (void)i;
+	// (void)j;
+	// (void)k;
+	// if (pci.vendorID != 0xFFFF && pci.class == 1 && pci.subclass == 6) {
+	// 	/*if (k==0) {
+	// 	  printf("Detected SATA Host on port %X:%X\n", i,j);
+	// 	  dprintf("Detected SATA Host on port %X:%X\n", i,j);
+	// 	} else {
+	// 	  printf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
+	// 	  dprintf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
+	// 	}*/
+	// 	// identity_map((void *)pci.BAR5);
+	// 	// initialize_abar((HBAData *)pci.BAR5);
+	// }
+	vga_print("Detected VGA on port i:j (printf hernya)\n");
+}
 
 void vga_init(void) {
 	vga_row = 0;
@@ -20,6 +38,7 @@ void vga_init(void) {
 		}
 	}
 	vga_update_cursor();
+	pci_register_driver(print_pci_vga_data, 3, 0);
 }
 
 void vga_update_cursor() {

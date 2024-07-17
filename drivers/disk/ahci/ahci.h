@@ -163,7 +163,7 @@ typedef struct {
 	uint8_t d : 1;
 	uint8_t i : 1;
 	uint8_t a : 1;
-
+    
 	uint8_t reserved1;
 
 	uint64_t DMA_buffer_id;
@@ -275,6 +275,15 @@ typedef struct {
 	uint32_t words_per_logical_sector;
 	uint16_t unused7[136];
 	uint16_t checksum;
-} sata_identify_packet __attribute__((packed));
+} sata_identify_packet __attribute__((packed)); //
+
+void ahci_init();
+
+uint8_t  ahci_read_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
+uint8_t ahci_write_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
+
+bool ahci_drive_exists(uint16_t drive_num);
+
+void ahci_print_sector(uint8_t *read);
 
 #endif

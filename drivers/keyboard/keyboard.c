@@ -60,7 +60,26 @@ const uint32_t uppercase[128] = {
     UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN,UNKNOWN
 };
 
+void print_pci_keyboard_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
+	// (void)i;
+	// (void)j;
+	// (void)k;
+	// if (pci.vendorID != 0xFFFF && pci.class == 1 && pci.subclass == 6) {
+	// 	/*if (k==0) {
+	// 	  printf("Detected SATA Host on port %X:%X\n", i,j);
+	// 	  dprintf("Detected SATA Host on port %X:%X\n", i,j);
+	// 	} else {
+	// 	  printf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
+	// 	  dprintf("Detected SATA Host on port %X:%X.%u\n",i,j,k);
+	// 	}*/
+	// 	// identity_map((void *)pci.BAR5);
+	// 	// initialize_abar((HBAData *)pci.BAR5);
+	// }
+	vga_print("Detected Keyboard on port i:j\n");
+}
+
 void keyboard_init(void) {
+    pci_register_driver(print_pci_keyboard_data, 9, 0);
     caps_on = false;
     irq_install_handler(1, &keyboard_handler);
 }

@@ -5,10 +5,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "./pci/pci.h"
 #include "./vga/vga.h"
 #include "./gdt/gdt.h"
 #include "./idt/idt.h"
-#include "./pci/pci.h"
 #include "./drivers/pit/pit.h"
 #include "./util/util.h"
 #include "./drivers/keyboard/keyboard.h"

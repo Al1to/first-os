@@ -30,11 +30,16 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 	kmalloc_init(0x1000);
 
 	// syscall_dbg();
-	pci_scan();
+
+	// char* str;
+	// itoa(123, str, 10);
+	// vga_print(str);
+
+	pci_scan(); // пока что никакие драйвера не подключаются через pci
 
 	// | принт просто по приколу, а цикл, чтобы не выбрасывало обратно в бутлоадер
 	// ↓ если выбросит, то перестанет работать ввод с клавиатуры
-	vga_print("el psy congroo.\n");
+	vga_print("El psy congroo.\n");
 
-	while(1);
+	while(true);
 }
