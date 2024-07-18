@@ -13,7 +13,7 @@
 
 extern uint32_t page_dir_init[1024];
 
-void pmm_init(uint32_t mem_low,uint32_t mem_high); 
+void pmm_init(uint32_t mem_low, uint32_t mem_high); 
 uint32_t pmm_alloc_page_frame();
 
 void mem_map_page(uint32_t vaddr, uint32_t paddr, uint32_t flags);

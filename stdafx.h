@@ -14,6 +14,7 @@
 #include "./drivers/keyboard/keyboard.h"
 #include "./multiboot.h"
 #include "./memory/memory.h"
+#include "./memory/paging/paging.h"
 #include "./kmalloc/kmalloc.h"
 #include "./syscalls/ivt/ivt.h"
 #include "./drivers/disk/ahci/ahci.h"

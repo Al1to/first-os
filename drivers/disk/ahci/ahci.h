@@ -78,8 +78,8 @@ typedef struct {
 	uint8_t lba5;
 	uint8_t feature_high;
 
-	uint8_t countl;
-	uint8_t counth;
+	uint8_t count_low;
+	uint8_t count_high;
 	uint8_t isync_cmd_complete;
 	uint8_t ctrl_reg;
 

@@ -31,10 +31,6 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
 	// syscall_dbg();
 
-	// char* str;
-	// itoa(123, str, 10);
-	// vga_print(str);
-
 	pci_scan(); // пока что никакие драйвера не подключаются через pci
 
 	// | принт просто по приколу, а цикл, чтобы не выбрасывало обратно в бутлоадер

@@ -57,4 +57,4 @@ myos.iso: isodir/boot/myos.bin isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $@ isodir
 
 run-qemu: myos.iso
-	qemu-system-i386 -cdrom myos.iso
+	qemu-system-i386 -device ahci,id=ahci -drive file=hard_disk_image_here.img,id=disk,if=none,format=raw -device ide-hd,drive=disk,bus=ahci.0 -cdrom myos.iso
