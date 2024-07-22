@@ -53,6 +53,23 @@
 //     kernel_page_dir[pagedir_addr].present = 1;
 //     kernel_page_dir[pagedir_addr].readwrite = 1;
 //     uint32_t nbpt_addr = (uint32_t)&new_base_page_table[0];
+//     nbpt_addr >>= 12;
+//     kernel_page_dir[pagedir_addr].address = nbpt_addr;
+
+//     for (uint16_t i = 0; i < 1023; ++i) {
+//         if ((i * 4096) >= 0x100000) {
+//             new_base_page_table[i].present = 1;
+//             new_base_page_table[i].readwrite = 1;
+//             new_base_page_table[i].address = i;
+//         }
+//     }
+//     new_base_page_table[1023].present = 1;
+//     new_base_page_table[1023].readwrite = 1;
+//     new_base_page_table[1023].address = 0x000B8;
+
+//     uint32_t new_addr = (uint32_t)&kernel_page_dir[0];
+//     new_addr -= 0xC0000000;
+//     asm volatile("mov %0, %%cr3" :: "r"(new_assr));
     
 // }
 
