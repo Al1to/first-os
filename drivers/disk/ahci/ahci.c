@@ -62,7 +62,7 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t
 
     HBACommandTable *cmd_table = (HBACommandTable*)aport.ctba[slot];
 
-    cmd_table->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
+    cmd_table->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf); // TODO: get_phys_addr
     cmd_table->prdt_entry[0].dbau = 0;
     cmd_table->prdt_entry[0].dbc - (count * 512) - 1;
     cmd_table->prdt_entry[0].i = 1;
@@ -127,7 +127,7 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t start_low, uint32_
 
     HBACommandTable *cmd_table = (HBACommandTable*)aport.ctba[slot];
 
-    cmd_table->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf);
+    cmd_table->prdt_entry[0].dba = (uint32_t)(intptr_t)get_phys_addr(buf); // TODO: get_phys_addr
     cmd_table->prdt_entry[0].dbau = 0;
     cmd_table->prdt_entry[0].dbc - (count * 512) - 1;
     cmd_table->prdt_entry[0].i = 1;

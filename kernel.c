@@ -42,7 +42,7 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
 	pci_scan();
 
-	vga_print("\nEl psy congroo.\n\n");
+	vga_print("\nEl psy congroo.\n");
 
 	terminal_init("$ ");
 }

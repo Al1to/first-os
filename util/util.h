@@ -3,18 +3,22 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-// ↓ заполняет первые count байтов области памяти, на которую указывает dest, байтом val
-void memset(void *dest, char val, uint32_t count);
-
-// ↓ переводит из числа в строку
-void itoa(unsigned long number, char *str, const unsigned int base);
-
-// ↓ эти функции - это просто сишные обертки для асм инструкций out и in
+// ↓ сишная обертка для асм инструкций outl
 void out_port_l(uint16_t port, uint32_t value);
+
+// ↓ сишная обертка для асм инструкций outw
 void out_port_w(uint16_t port, uint16_t value);
+
+// ↓ сишная обертка для асм инструкций outb
 void out_port_b(uint16_t port, uint8_t  value);
+
+// ↓ сишная обертка для асм инструкций inl
 uint32_t in_port_l(uint16_t port);
+
+// ↓ сишная обертка для асм инструкций inw
 uint16_t in_port_w(uint16_t port);
+
+// ↓ сишная обертка для асм инструкций inb
 uint8_t  in_port_b(uint16_t port);
 
 void syscall_dbg();

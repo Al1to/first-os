@@ -19,5 +19,7 @@
 #include "./syscalls/ivt/ivt.h"
 #include "./drivers/disk/ahci/ahci.h"
 #include "./terminal/terminal.h"
+#include "./std/math/math.h"
+#include "./std/string/string.h"
 
 #endif
