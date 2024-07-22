@@ -45,10 +45,10 @@ bool pci_register_driver(void (*pci_function)(pci_t, uint8_t, uint8_t, uint8_t),
 
 // вот эти функции 4 штуки эти 2 и след 2, я честно не очень понял чзх, ты там щас в .c их увидишь и так же подумаешь
 uint32_t pci_read_config_dword(uint8_t bus, uint8_t num, uint8_t function, uint8_t offset);
-uint16_t  pci_read_config_word(uint8_t bus, uint8_t num, uint8_t function, uint8_t offset);
+uint16_t pci_read_config_word (uint8_t bus, uint8_t num, uint8_t function, uint8_t offset);
 
 void pci_write_config_dword(uint8_t bus, uint8_t num, uint8_t function, uint8_t offset, uint32_t value);
-void  pci_write_config_byte(uint8_t bus, uint8_t num, uint8_t function, uint8_t offset,  uint8_t value);
+void pci_write_config_byte (uint8_t bus, uint8_t num, uint8_t function, uint8_t offset,  uint8_t value);
 
 // тут все просто, ей отдаешь номер и всякую базовую инфу про драйвер а она возвращает тебе фулл структуру pci_t, где гораздо больше
 pci_t pci_get_data(uint8_t bus, uint8_t num, uint8_t function);

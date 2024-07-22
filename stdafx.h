@@ -18,5 +18,6 @@
 #include "./kmalloc/kmalloc.h"
 #include "./syscalls/ivt/ivt.h"
 #include "./drivers/disk/ahci/ahci.h"
+#include "./terminal/terminal.h"
 
 #endif

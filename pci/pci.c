@@ -4,7 +4,7 @@ typedef struct {
 	uint8_t class;
 	uint8_t subclass;
 	const char *name; // вот тут структура
-} pci_classname;      // ге знаю что про нее говорить, ну вот да она такая да
+} pci_classname;      // не знаю что про нее говорить, ну вот да она такая да
 
 pci_classname classnames[] = {
 	{0x00, 0x00, "Non-VGA-Compatible Unclassified Device"},

@@ -34,7 +34,7 @@ void vga_new_line(void);
 void vga_put_char(char ch);
 void vga_put_charс(uint8_t color, char ch);
 void vga_print(const char* str);
-void vga_printс(uint8_t color, const char* str);
+void vga_printc(uint8_t color, const char* str);
 void vga_printf(const char* str, int d);
 
 // | принимает цвет символа и цвет фона
@@ -48,5 +48,12 @@ static inline uint8_t vga_entry_color(uint8_t fg, uint8_t bg) {
 static inline uint16_t vga_entry(unsigned char uc, uint8_t color) {
 	return (uint16_t) uc | (uint16_t) color << 8;
 }
+
+typedef struct {
+	size_t row;
+	size_t col;
+} position;
+
+position vga_get_pos();
 
 #endif

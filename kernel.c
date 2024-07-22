@@ -1,8 +1,15 @@
 #include "stdafx.h"
 
+/*/
+ * kernel_main - это главная функция ядра ос, ее вызывает бутлоадер (boot.asm)
+ * она принимает 2 аргумента:
+ * magic - это просто число, которое говорит о том, успешно ли прошел этап бутлоадера (я хз, вроде так)
+ * boot_info - это предоставленная нам вся необходимая инфа (структура в multiboot.h)
+/*/
+
 void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
-	// | это 3 базовых инита + 2 для графики (vga) и ввода (keyboard), порядок именно такой
+	// | это 3 базовых инита + для cli графики (vga) и ввода (keyboard), порядок именно такой
 	// ↓ их описания в соответствующих файлах
 	vga_init();
 	gdt_init();
@@ -31,11 +38,11 @@ void kernel_main(uint32_t magic, struct multiboot_info* boot_info) {
 
 	// syscall_dbg();
 
-	pci_scan(); // пока что никакие драйвера не подключаются через pci
+	// ahci_init();
 
-	// | принт просто по приколу, а цикл, чтобы не выбрасывало обратно в бутлоадер
-	// ↓ если выбросит, то перестанет работать ввод с клавиатуры
-	vga_print("El psy congroo.\n");
+	pci_scan();
 
-	while(true);
+	vga_print("\nEl psy congroo.\n\n");
+
+	terminal_init("$ ");
 }

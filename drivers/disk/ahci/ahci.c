@@ -46,11 +46,11 @@ void print_pci_AHCI_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 	vga_print("Detected AHCI on port i:j\n");
 }
 
-void ahci_read_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t start_high, uint32_t count, uint8_t *buf) {
+uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t start_high, uint32_t count, uint8_t *buf) {
     HBAPort *port = aport.port;
     port->is = 0xFFFFFFFF;
 
-    uint32_t slot = find_cmdslot(aport);
+    uint32_t slot = find_cmd_slot(aport);
     if (slot == 0xFFFFFFFF) {
         return 1;
     }
@@ -110,7 +110,8 @@ void ahci_read_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t st
 
     return 0;
 }
-void ahci_write_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t start_high, uint32_t count, uint8_t *buf) {
+
+uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t start_high, uint32_t count, uint8_t *buf) {
     HBAPort *port = aport.port;
     port->is = 0xFFFFFFFF;
     

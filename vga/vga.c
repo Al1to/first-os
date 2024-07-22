@@ -23,7 +23,7 @@ void print_pci_vga_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 	// 	// identity_map((void *)pci.BAR5);
 	// 	// initialize_abar((HBAData *)pci.BAR5);
 	// }
-	vga_print("Detected VGA on port i:j (printf hernya)\n");
+	vga_print("Detected VGA on port i:j\n");
 }
 
 void vga_init(void) {
@@ -82,8 +82,7 @@ void vga_put_char(char ch) {
 			vga_update_cursor();
 			break;
 		case '\b':
-			if (vga_column == 0 && vga_row != 0)
-			{
+			if (vga_column == 0 && vga_row != 0) {
 				--vga_row;
 				vga_column = VGA_WIDTH;
 			}
@@ -144,7 +143,7 @@ void vga_print(const char* str) {
 	}
 }	
 
-void vga_printс(uint8_t color, const char* str) {
+void vga_printc(uint8_t color, const char* str) {
 	uint8_t vga_printc_color = vga_entry_color(color, 0);
 	while (*str) {
 		vga_put_charс(vga_printc_color, *str++);
@@ -182,4 +181,11 @@ void vga_printf(const char* str, int n) {
 		++str;
 	}
 	vga_update_cursor();
+}
+
+position vga_get_pos() {
+	position pos;
+	pos.row = vga_row;
+	pos.col = vga_column;
+	return pos;
 }

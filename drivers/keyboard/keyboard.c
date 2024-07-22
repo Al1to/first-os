@@ -1,7 +1,15 @@
 #include "./keyboard.h"
 
+bool input;
+
 bool caps_on;
 bool caps_lock;
+
+#define KEYBOARD_BUFFER_SIZE 128
+
+char buffer[KEYBOARD_BUFFER_SIZE];
+int  buffer_head = 0;
+int  buffer_tail = 0;
 
 const uint32_t UNKNOWN   = 0xFFFFFFFF;
 const uint32_t ESC       = 0xFFFFFFFF - 1;
@@ -80,13 +88,15 @@ void print_pci_keyboard_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 
 void keyboard_init(void) {
     pci_register_driver(print_pci_keyboard_data, 9, 0);
+    input = false;
     caps_on = false;
     irq_install_handler(1, &keyboard_handler);
 }
 
 void keyboard_handler(struct int_regs *regs) {
+    if (!input) return;
     char scan_code = in_port_b(0x60) & 0x7F;
-    char press = in_port_b(0x60) & 0x80;
+    char press     = in_port_b(0x60) & 0x80;
 
     switch (scan_code) {
         case 1:
@@ -106,31 +116,53 @@ void keyboard_handler(struct int_regs *regs) {
         case 88:
             break;
             
-        case 42:                                // shift
+        case 28:                                                // enter
             if (press == 0) {
-                caps_on == true;
-            } else {
-                caps_on == false;
+                vga_print("\n");
+                buffer[buffer_head] = '\0';
+                ++buffer_head;
             }
             break;
-            
-        case 58:                                // caps_lock
-            if (!caps_lock && press == 0) {
-                caps_lock = true;
-            } else if (caps_lock && press == 0) {
-                caps_lock = false;
-            }
+        case 42:                                                // shift
+            if (press == 0) caps_on == true;
+            else            caps_on == false;
             break;
             
+        case 58:                                                // caps_lock
+            if (!caps_lock && press == 0)     caps_lock = true;
+            else if (caps_lock && press == 0) caps_lock = false;
+            break;
+            
+        case 14:                                                // backspace
+            position cur_pos = vga_get_pos();
+            position stop_delete = get_terminal_stop_delete();
+            if (( cur_pos.row != stop_delete.row
+               || cur_pos.col != stop_delete.col) 
+               && press == 0) {
+                vga_print("\b");
+                if (buffer_head > 0) --buffer_head;
+            }
+            break;
+
         default:
             if (press == 0) {
                 if (caps_on || caps_lock) {
                     vga_printf("%c", uppercase[scan_code]);
+                    buffer[buffer_head] = uppercase[scan_code];
                 } else { 
                     vga_printf("%c", lowercase[scan_code]);
-
+                    buffer[buffer_head] = lowercase[scan_code];
                 }
+                ++buffer_head; // не уверен
             }
             break;
     }
+}
+
+char* wait_keyboard_input(void) { 
+    input = true;
+    while (buffer_head == buffer_tail);
+    char* buf = buffer + buffer_tail;
+    buffer_tail = (buffer_tail + 1) % KEYBOARD_BUFFER_SIZE;
+    return buf;
 }
