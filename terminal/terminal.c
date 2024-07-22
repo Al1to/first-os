@@ -3,7 +3,8 @@
 position terminal_stop_delete;
 
 void terminal_init(const char* prompt) {
-    // while(true) {
+    while(true) {
+        vga_print("\n");
         // path = get_path();
         // vga_printc(8, path);
         vga_printc(7, prompt);
@@ -12,8 +13,8 @@ void terminal_init(const char* prompt) {
         vga_print(command);
         // ... execute
         // break;
-    // }
-    while(true);
+    }
+    // while(true);
 }
 
 position get_terminal_stop_delete() {

@@ -1,15 +1,15 @@
 #include "./keyboard.h"
 
-bool input;
-
-bool caps_on;
-bool caps_lock;
+volatile bool input;
 
 #define KEYBOARD_BUFFER_SIZE 128
 
 char buffer[KEYBOARD_BUFFER_SIZE];
 int  buffer_head = 0;
 int  buffer_tail = 0;
+
+bool caps_on;
+bool caps_lock;
 
 const uint32_t UNKNOWN   = 0xFFFFFFFF;
 const uint32_t ESC       = 0xFFFFFFFF - 1;
@@ -121,6 +121,7 @@ void keyboard_handler(struct int_regs *regs) {
                 vga_print("\n");
                 buffer[buffer_head] = '\0';
                 ++buffer_head;
+                input = false;
             }
             break;
         case 42:                                                // shift
@@ -153,7 +154,7 @@ void keyboard_handler(struct int_regs *regs) {
                     vga_printf("%c", lowercase[scan_code]);
                     buffer[buffer_head] = lowercase[scan_code];
                 }
-                ++buffer_head; // не уверен
+                ++buffer_head;
             }
             break;
     }
@@ -161,7 +162,7 @@ void keyboard_handler(struct int_regs *regs) {
 
 char* wait_keyboard_input(void) { 
     input = true;
-    while (buffer_head == buffer_tail);
+    while (input);
     char* buf = buffer + buffer_tail;
     buffer_tail = (buffer_tail + 1) % KEYBOARD_BUFFER_SIZE;
     return buf;
