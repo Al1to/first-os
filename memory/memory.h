@@ -25,4 +25,8 @@ void mem_map_page(uint32_t vaddr, uint32_t paddr, uint32_t flags);
 void memory_init(uint32_t mem_high, uint32_t phys_alloc_start); 
 void invalidate(uint32_t vaddr);
 
+// int find_free_frame();
+
+void* alloc_page(size_t pages);
+
 #endif

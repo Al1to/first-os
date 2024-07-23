@@ -17,9 +17,11 @@
 #include "./memory/paging/paging.h"
 #include "./kmalloc/kmalloc.h"
 #include "./syscalls/ivt/ivt.h"
-#include "./drivers/disk/ahci/ahci.h"
+// #include "./drivers/disk/disk.h"
+// #include "./drivers/disk/ahci/ahci.h"
 #include "./terminal/terminal.h"
 #include "./std/math/math.h"
 #include "./std/string/string.h"
+#include "./std/mem/mem.h"
 
 #endif

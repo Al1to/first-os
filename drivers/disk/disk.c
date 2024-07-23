@@ -3,7 +3,7 @@
 typedef struct {
     bool used;
     uint32_t max_port_count;
-    uint8_t (*read_function)(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
+    uint8_t ( *read_function)(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
     uint8_t (*write_function)(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf);
 } disk_handler;
 
@@ -14,7 +14,7 @@ uint8_t register_disk_handler(uint8_t (*read_function)(uint16_t, uint64_t, uint3
         if (!handlers[i].used) {
             handlers[i].used = true;
             handlers[i].max_port_count = max_port_count;
-            handlers[i].read_function = read_function;
+            handlers[i].read_function  = read_function;
             handlers[i].write_function = write_function;
             return i;
         }
@@ -29,7 +29,7 @@ void unregister_disk_handler(uint8_t handler_id) {
 
     handlers[handler_id].used = false;
     handlers[handler_id].max_port_count = 0;
-    handlers[handler_id].read_function = NULL;
+    handlers[handler_id].read_function  = NULL;
     handlers[handler_id].write_function = NULL;
 }
 

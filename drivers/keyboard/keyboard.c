@@ -4,9 +4,23 @@ volatile bool input;
 
 #define KEYBOARD_BUFFER_SIZE 128
 
-char buffer[KEYBOARD_BUFFER_SIZE];
-int  buffer_head = 0;
-int  buffer_tail = 0;
+typedef struct {
+    volatile int head;
+    volatile int tail;
+    char buffer[KEYBOARD_BUFFER_SIZE];
+} buffer_t;
+
+buffer_t buffer;
+static char input_buffer[KEYBOARD_BUFFER_SIZE];
+
+void buffer_push(char data) {
+    buffer.buffer[buffer.tail] = data;
+    buffer.tail = (buffer.tail + 1) % KEYBOARD_BUFFER_SIZE;
+}
+
+void buffer_pop() {
+    buffer.tail = (buffer.tail - 1) % KEYBOARD_BUFFER_SIZE;
+}
 
 bool caps_on;
 bool caps_lock;
@@ -88,6 +102,7 @@ void print_pci_keyboard_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 
 void keyboard_init(void) {
     pci_register_driver(print_pci_keyboard_data, 9, 0);
+    buffer.head = buffer.tail = 0;
     input = false;
     caps_on = false;
     irq_install_handler(1, &keyboard_handler);
@@ -116,11 +131,21 @@ void keyboard_handler(struct int_regs *regs) {
         case 88:
             break;
             
+        // case 75:                                             // left
+        //     position cur_pos_left = vga_get_pos();
+        //     position stop_delete_left = get_terminal_stop_delete();
+        //     if (( cur_pos_left.row != stop_delete_left.row
+        //        || (cur_pos_left.col-1) != stop_delete_left.col) 
+        //        && press == 0) {
+        //         cur_pos_left.col -= 1;
+        //         vga_set_pos(cur_pos_left);
+        //     }
+        //     break; 
+            
         case 28:                                                // enter
             if (press == 0) {
                 vga_print("\n");
-                buffer[buffer_head] = '\0';
-                ++buffer_head;
+                buffer_push('\0');
                 input = false;
             }
             break;
@@ -135,13 +160,13 @@ void keyboard_handler(struct int_regs *regs) {
             break;
             
         case 14:                                                // backspace
-            position cur_pos = vga_get_pos();
-            position stop_delete = get_terminal_stop_delete();
-            if (( cur_pos.row != stop_delete.row
-               || cur_pos.col != stop_delete.col) 
+            position cur_pos_bs = vga_get_pos();
+            position stop_delete_bs = get_terminal_stop_delete();
+            if (( cur_pos_bs.row != stop_delete_bs.row
+               || cur_pos_bs.col != stop_delete_bs.col) 
                && press == 0) {
                 vga_print("\b");
-                if (buffer_head > 0) --buffer_head;
+                buffer_pop();
             }
             break;
 
@@ -149,12 +174,11 @@ void keyboard_handler(struct int_regs *regs) {
             if (press == 0) {
                 if (caps_on || caps_lock) {
                     vga_printf("%c", uppercase[scan_code]);
-                    buffer[buffer_head] = uppercase[scan_code];
+                    buffer_push(uppercase[scan_code]);
                 } else { 
                     vga_printf("%c", lowercase[scan_code]);
-                    buffer[buffer_head] = lowercase[scan_code];
+                    buffer_push(lowercase[scan_code]);
                 }
-                ++buffer_head;
             }
             break;
     }
@@ -163,7 +187,13 @@ void keyboard_handler(struct int_regs *regs) {
 char* wait_keyboard_input(void) { 
     input = true;
     while (input);
-    char* buf = buffer + buffer_tail;
-    buffer_tail = (buffer_tail + 1) % KEYBOARD_BUFFER_SIZE;
-    return buf;
+
+    int size = (buffer.tail + KEYBOARD_BUFFER_SIZE - buffer.head) % KEYBOARD_BUFFER_SIZE;
+    for (int i = 0; i < size; i++) {
+        input_buffer[i] = buffer.buffer[(buffer.head + i) % KEYBOARD_BUFFER_SIZE];
+    }
+
+    buffer.head = buffer.tail % KEYBOARD_BUFFER_SIZE;
+    
+    return input_buffer;
 }

@@ -1,11 +1,13 @@
 #include "./mem.h"
 
-typedef struct {
+typedef struct alloc_t alloc_t;
+
+struct alloc_t {
 	size_t size;
 	bool used;
 	alloc_t *next;
 	alloc_t *prev;
-} alloc_t;
+};
 
 heap_t cur_heap;
 

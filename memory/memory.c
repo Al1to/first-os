@@ -23,20 +23,20 @@ static uint32_t total_alloc;
 // ↓ кол-во PAGES_DIR
 #define NUM_PAGES_DIRS 256
 
-// | это кол-во фреймов в физ памяти и равносильно страниц в виртуальной памяти
-// | 0x100000000 - это 4гб в байтах, т.е. вся доступная физ память (ну я так понял)
+// | это кол-во фреймов в физ памяти и равносильно страниц в виртуальной памяти // 0x20000
+// | 0x10000000 - это 4гб в байтах, т.е. вся доступная физ память (ну я так понял)
 // | 0x1000 - это 4кб в байтах, по сути фулл память делим на размер страницы/фрейма, чтобы получить их кол-во
 // | TODO: делим еще на 8, т.к. ... та хрен его знает
 // ↓ P.S. далее страница/фрейм буду сокращать с/ф
-#define NUM_PAGES_FRAMES (0x100000000 / 0x1000 / 8) // 0x20_000
+#define NUM_PAGES_FRAMES (0x10000000 / 0x1000 / 8)
 
-// | битмап физ памяти; каждому биту соответствует один фрейм
+// | битмап физ памяти; каждому биту соответствует один фрейм  // 0x4000
 // | кол-во с/ф делим на 8, т.к. нам надо, чтобы было по одному биту на одну с/ф,
 // | т.е. нам нужен массив по размеру равный формуле (1бит * кол-во с/ф)
 // | ну и поскольку 1 байт это минималочка которую мы можем выделять на ячейку массива в Си, 
 // | мы просто уменьшаем кол-во ячеек в 8 раз 
 // ↓ 0 - фрейм свободен, 1 - фрейм занят
-uint8_t phys_memory_bitmap[NUM_PAGES_FRAMES / 8]; // 0x4_000
+uint8_t phys_memory_bitmap[NUM_PAGES_FRAMES / 8];
 
 // | массив PAGES_DIR-ов, в каждом таком по 1024 32бит записей
 // | TODO: выровнен по 4кб, т.к. ...
@@ -72,7 +72,8 @@ void pmm_init(uint32_t mem_low,uint32_t mem_high) {
     memset(phys_memory_bitmap, 0, sizeof(phys_memory_bitmap));
 }
 
-// ↓ изменяет c текущего PAGES_DIR на другой, а что это вообще значит, я сам еще несовсем понимаю
+// | изменяет c текущего PAGES_DIR на другой
+// ↓ похоже, что в cr3 хранится какой-то конкретный PAGES_DIR из всех или тп
 void mem_change_page_dir(uint32_t* pd) {
 
     // | вычисление адреса PAGES_DIR
@@ -84,10 +85,56 @@ void mem_change_page_dir(uint32_t* pd) {
     asm volatile("mov %0, %%eax \n mov %%eax, %%cr3 \n" :: "m"(pd));
 }
 
+
+
+
+
+
+// тогда ничего сложного )) где он, этот битмап
+
+// вместо кернел таблес у нас наш любимый битмап)
+
+// давай, приключение на 15 минут, зашли и вышли)) 
+// P.S. время 04:37
+
+
 // TODO: вот эту херь нужно как-то реализовать и в нашем коде
 // void *get_phys_addr(void *vaddr) {
 //     return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
 // }
+
+void *get_phys_addr(void *vaddr) {
+    // return (void *)(phys_memory_bitmap[]);
+}
+
+// 
+
+
+
+// крч не битмап все таки похоже
+// из page_dirs нам нужно достать page_dir по индексу (uint32_t)vaddr/4096
+// потом ...
+
+
+/*  (void *) 
+    (
+        (
+            kernel_tables
+                [
+                    (uint32_t)vaddr/4096
+                ]
+                .address*4096
+        )
+        +
+        (
+            (uint32_t)vaddr
+            &
+            0xFFF
+        )
+    ) 
+*/
+
+
 
 
 
@@ -132,7 +179,7 @@ void sync_page_dirs() {
 
 
 // ↓ возвращает физ адрес текущего PAGES_DIR
-uint32_t* mem_get_cur_page_dir() {
+uint32_t* mem_get_cur_byte_page_dir() {
 
     // ↓ получаем смещение текущего PAGES_DIR от KERNEL_START 
     uint32_t pd;
@@ -166,7 +213,7 @@ void mem_map_page(uint32_t vaddr, uint32_t paddr, uint32_t flags) {
     if (vaddr >= KERNEL_START) {
 
         // ↓ получение адреса текущего PAGES_DIR
-        paddr = mem_get_cur_page_dir(); 
+        paddr = mem_get_cur_byte_page_dir(); 
 
         // | page_dir_init - это самый первый PAGES_DIR, он объявлен в boot.asm
         // ↓ если текущий PAGES_DIR не является начальным
@@ -376,3 +423,208 @@ void memory_init(uint32_t mem_high, uint32_t phys_alloc_start) {
 void invalidate(uint32_t vaddr) {
     asm volatile("invlpg %0" :: "m"(vaddr));
 }
+
+
+
+
+
+
+
+
+typedef struct {
+    size_t bytes;
+    uint8_t cur_bit;
+} free_frame;
+
+free_frame find_free_frame() {
+    for (int i = 0; i < NUM_PAGES_FRAMES / 8; i++) {
+        if (phys_memory_bitmap[i] != 0xFF) {
+            for (int j = 0; j < 8; j++) {
+                if (!(phys_memory_bitmap[i] & (1 << j))) {
+                    free_frame fr;
+                    fr.bytes = i*8; fr.cur_bit = j;
+                    return fr;
+                } 
+            }
+        }
+    }
+    free_frame fr;
+    fr.bytes = fr.cur_bit = 0;
+    return fr;
+}
+
+// передавайте мне bytes+1 из find_free_frame, если его ответ не подошел
+free_frame find_free_frame_with_offset(size_t bytes) {
+    for (int i = bytes; i < NUM_PAGES_FRAMES / 8; i++) {
+        if (phys_memory_bitmap[i] != 0xFF) {
+            for (int j = 0; j < 8; j++) {
+                if (!(phys_memory_bitmap[i] & (1 << j))) {
+                    free_frame fr;
+                    fr.bytes = i*8; fr.cur_bit = j;
+                    return fr;
+                } 
+            }
+        }
+    }
+    free_frame fr;
+    fr.bytes = fr.cur_bit = 0;
+    return fr;
+}
+
+// void* alloc_page(size_t pages) {
+
+//     // если pages = 0, то идите нах
+//     if (!pages) return 0;
+
+//     // счетчик свободных фреймов подряд 
+//     size_t free_frames = 0;
+//     int ii = 0;    
+
+//     // цикл по байтам в битмапе
+//     for (int i = 0; (i < NUM_PAGES_FRAMES / 8); i++) {
+
+//         // если байт не полный, то...
+//         if (phys_memory_bitmap[i] != 0xFF) {
+
+//             // проходимся по байту
+//             for (ii = 0; ii < 8; ++ii) {
+
+//                 // если бит 0, то ++free_frames, но если вдруг нам нужно фреймов больше чем есть в этом байте
+//                 // то вот в этом и проблема пока что, прикол в том, что нам нужна ii, ее можно вынести
+//                 if (!(phys_memory_bitmap[i] & (1 << ii))) ++free_frames;
+//             }
+//         }
+//     }   //    ^
+// } // а это че |     
+
+
+void* alloc_page(size_t pages) {
+    // если pages = 0, то выходим из функции 
+    if (!pages) {
+        return NULL;
+    }
+    // счетчик свободных фреймов подряд
+    size_t free_frames_count = 0;
+
+    // флаг, для поиска 'начала последовательности' свободных фреймов
+    bool find_start = true;
+
+    // кол-во байтов до байта, в котором есть свободные биты
+    size_t bytes = 0; 
+    // первый свободный бит в bytes+1    // +1 
+    uint8_t cur_bit = 0;
+
+    // цикл по байтам в битмапе
+    // вычисляет с какого байта и бита в нём, далее идут свободные биты(в последующих байтах)
+    for (int i = 0; (i < NUM_PAGES_FRAMES / 8) && free_frames_count != pages; i++) {
+        // если байт полный, то пропускаем его и переходим к следующему
+        if (phys_memory_bitmap[i] == 0xFF) {
+            continue;
+        }
+        // проходимся по битам в байте, при условии, что мы не нашли нужное количество свободных фреймов
+        for (int ii = 0; ii < 8 && free_frames_count != pages; ++ii) { 
+            // если бит(ii + 1) == 0, то ++free_frames_count
+            if (!(phys_memory_bitmap[i] & (1 << ii))) {
+                // если флаг поиска == true, то ...
+                if (find_start) {
+                    // устанавливаем смещение байта и бита, для начала последовательности
+                    bytes = i;
+                    cur_bit = ii;
+                    // отключаем флаг поиска
+                    find_start = false; 
+                }
+                ++free_frames_count;
+            }
+            
+            // в случае, когда у нас не хватает свободных битов(фреймов) ПОДРЯД
+            else {
+                // включаем флаг поиска
+                find_start = true;
+                // обнуляем счётчик свободных фреймов подряд 
+                free_frames_count = 0; 
+            }
+        }
+    }
+    
+    if (free_frames_count == pages) {
+        // bytes+1 это байт в котором начинаются свободные биты
+        // cur_bit бит с которого начинаются свободные биты
+
+        // смещение с которого начинаются свободные фреймы, количество которых равно pages
+        size_t free_frames_offset = bytes * 8 + cur_bit; 
+        // ТУТ ВОТ НАВЕРНОЕ НУЖНО ВЫДЕЛИТЬ ПАМЯТЬ
+        // равной pages, начиная с free_frames_offset
+    } else {
+        // PANIC("MEM FULL");
+    }
+
+}
+
+    // map_addr((void *)((i+step)*4096), paddr);
+    
+    //return (void *)(i*4096);
+
+
+
+
+                        // if (phys_memory_bitmap[i] != 0xFF) {
+                        //     for (int j = 0; j < 8; j++) {
+                        //         if (free_frames == pages) break;
+                        //         if (!(phys_memory_bitmap[i] & (1 << j))) ++free_frames;
+                        //         else break;
+                        //     }
+                        //     if (free_frames == pages) {
+
+                        //     }
+                        // }
+
+
+
+
+
+// if (phys_memory_bitmap[i] == 0xFF) {
+//  continue;
+// }
+
+
+
+// // по сути надо просто переписать с учетом того, что у нас битмап, а не таблица   // пфф всего-то...
+// void* alloc_page_togo_chelika(size_t pages) { // и весь прикол в таблице
+//     if (!pages) return 0;
+
+//     // вместо нашего битмапа, просто идет по таблице
+//     for(uint32_t i = 786432; i < 1048576; i++) {
+
+//         // если не занят фрейм
+//         if (!kernel_tables[i].present) {
+
+//             // то создаем счетчик свобоных фреймов подряд со сразу первым
+//             size_t successful_pages = 1;
+
+//             // идем дальше по той же таблице 
+//             for (uint32_t j = i+1; j-i<pages+1; j++) {
+
+//                 // если колво найденных свободных равно нужному то выходим из цикла
+//                 if (successful_pages==pages) break;
+
+//                 // если нашелся не занятый фрейм то добавляем и его
+//                 if (!kernel_tables[j].present) ++successful_pages;
+
+//                 // если ни то, ни другое, то значит наткнулись на занятый фрейм, когда нам надо еще
+//                 // следовательно ломаем цикл
+//                 else break;
+//             }
+
+//             // когда цикл сломан, мы чекаем, как он был сломан
+//             // если нужное колво собрано, то аллоцируем, а иначе новая итерация всего самого первого цикла
+//             if (successful_pages==pages) {
+
+//                 // тут аллокация, пох, у нас по другому
+            
+//             }
+            
+//         }
+//     }
+//     // PANIC("OUT OF MEMORY");
+//     return 0;
+// }

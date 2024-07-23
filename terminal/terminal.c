@@ -12,9 +12,7 @@ void terminal_init(const char* prompt) {
         char* command = wait_keyboard_input();
         vga_print(command);
         // ... execute
-        // break;
     }
-    // while(true);
 }
 
 position get_terminal_stop_delete() {

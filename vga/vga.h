@@ -55,5 +55,6 @@ typedef struct {
 } position;
 
 position vga_get_pos();
+void vga_set_pos(position pos);
 
 #endif

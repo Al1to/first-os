@@ -189,3 +189,9 @@ position vga_get_pos() {
 	pos.col = vga_column;
 	return pos;
 }
+
+void vga_set_pos(position pos) {
+	vga_row = pos.row;
+	vga_column = pos.col;
+	vga_update_cursor();
+}
