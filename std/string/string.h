@@ -19,4 +19,6 @@ size_t strlen(const char *string);
 // ↓ при условии что длина destptr > длины scrptr, иначе возвращает NULL
 char* strcpy(char *destptr, char *scrptr); 
 
+void *memcpy(void *restrict dstptr, const void *restrict srcptr, size_t size);
+
 #endif

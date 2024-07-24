@@ -14,7 +14,7 @@ typedef struct {
 ahci_port *ports;
 uint32_t num_ports;
 
-uint32_t find_cmd_slot(ahci_port aport) {
+uint32_t find_cmd_slot(ahci_port aport) { // а, ага
     HBAPort *port = aport.port;
     uint32_t slots = (port->sact | port->ci);
     uint32_t cmd_slots = (aport.abar->cap & 0x0F00) >> 8;
@@ -43,7 +43,11 @@ void print_pci_AHCI_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 	// 	// identity_map((void *)pci.BAR5);
 	// 	// initialize_abar((HBAData *)pci.BAR5);
 	// }
-	vga_print("Detected AHCI on port i:j\n");
+	vga_print("Detected AHCI on port ");
+    vga_printf("%x", i);
+	vga_print(":");
+	vga_printf("%x", j); // itoa не работает
+	vga_print("\n");
 }
 
 uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t start_high, uint32_t count, uint8_t *buf) {
@@ -104,7 +108,7 @@ uint8_t ahci_read_sectors_internal(ahci_port aport, uint32_t start_low, uint32_t
             return 3;
         }
     }
-    if (port->is & (1 << 30)) { // <--------------------------------- я хз зачем тут повторение этого блока условия, но ладно
+    if (port->is & (1 << 30)) {
         return 3;
     }
 
@@ -115,7 +119,7 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t start_low, uint32_
     HBAPort *port = aport.port;
     port->is = 0xFFFFFFFF;
     
-    uint32_t slot = find_cmdslot(aport);
+    uint32_t slot = find_cmd_slot(aport);
     if (slot == 0xFFFFFFFF) {
         return 1;
     }
@@ -169,7 +173,7 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t start_low, uint32_
             return 3;
         }
     }
-    if (port->is & (1 << 30)) { // <--------------------------------- я хз зачем тут повторение этого блока условия, но ладно
+    if (port->is & (1 << 30)) {
         return 3;
     }
 
@@ -177,12 +181,10 @@ uint8_t ahci_write_sectors_internal(ahci_port aport, uint32_t start_low, uint32_
 }
 
 void ahci_init() {
-    ports = pmm_alloc_page_frame(16);
+    ports = alloc_page(16);
 
     pci_register_driver(print_pci_AHCI_data, 1, 6);
     driver_id = register_disk_handler(ahci_read_sectors, ahci_write_sectors, 255);
-
-    vga_print("Initialized AHCI driver"); 
 }
 
 uint8_t  ahci_read_sectors(uint16_t drive_num, uint64_t start_sector, uint32_t count, void *buf) { // вот тут

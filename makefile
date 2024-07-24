@@ -16,24 +16,21 @@ idt/idt.o \
 idt/idt_s.o \
 drivers/pit/pit.o \
 drivers/keyboard/keyboard.o \
-memory/memory.o \
-kmalloc/kmalloc.o \
 syscalls/handler/syscall_handler.o \
 syscalls/handler/syscall_handler_s.o \
 syscalls/ivt/ivt.o \
 terminal/terminal.o \
 std/math/pow.o \
-std/mem/mem.o \
 std/string/itoa.o \
 std/string/memcpy.o \
 std/string/memset.o \
 std/string/strlen.o \
 std/string/strcmp.o \
 std/string/strcpy.o \
+# std/mem/mem.o \
 # drivers/disk/disk.o \
 # drivers/disk/ahci/ahci.o \
-# drivers/disk/ata/ata.o \
-# drivers/disk/ata/ata_s.o \
+# memory/memory.o \
 
 all: myos.bin
 
@@ -43,6 +40,7 @@ myos.bin: $(OBJS) linker.ld
 	$(CC) -T linker.ld -fno-pic -Wl,--build-id=none -o $@ $(CFLAGS) $(OBJS) $(LIBS)
 
 %.o: %.c
+	# флаг -g для отладочной информации в объектниках
 	$(CC) -c $< -o $@ -std=gnu99 $(CFLAGS) -fno-pic
 
 %.o: %.asm
@@ -67,5 +65,9 @@ myos.iso: isodir/boot/myos.bin isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $@ isodir
 
 run-qemu: myos.iso
-	# qemu-system-i386 -device ahci,id=ahci -drive file=hard_disk_image_here.img,id=disk,if=none,format=raw -device ide-hd,drive=disk,bus=ahci.0 -cdrom myos.iso
-	qemu-system-i386 -cdrom myos.iso
+	# dd if=/dev/zero of=my_SATA_disk.img bs=1M count=32   # 32 мб диск
+	qemu-system-i386 -m 512M -cdrom myos.iso -device ahci,id=ahci -drive file=my_SATA_disk.img,id=disk,if=none,format=raw -device ide-hd,drive=disk,bus=ahci.0
+
+run-qemu-dbg: myos.iso
+	# dd if=/dev/zero of=my_SATA_disk.img bs=1M count=32   # 32 мб диск
+	qemu-system-i386 -m 512M -s -S -cdrom myos.iso -device ahci,id=ahci -drive file=my_SATA_disk.img,id=disk,if=none,format=raw -device ide-hd,drive=disk,bus=ahci.0

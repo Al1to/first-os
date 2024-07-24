@@ -23,7 +23,11 @@ void print_pci_vga_data(pci_t pci, uint8_t i, uint8_t j, uint8_t k) {
 	// 	// identity_map((void *)pci.BAR5);
 	// 	// initialize_abar((HBAData *)pci.BAR5);
 	// }
-	vga_print("Detected VGA on port i:j\n");
+	vga_print("Detected VGA on port ");
+	vga_printf("%x", i);
+	vga_print(":");
+	vga_printf("%x", j); // itoa не работает
+	vga_print("\n");
 }
 
 void vga_init(void) {

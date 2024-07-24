@@ -1,630 +1,518 @@
 #include "./memory.h"
 
-/*/
- * на аппаратном уровне у нас есть физическая память,
- * но для процессов и прочей хери нам нужно переводить это все в виртуальную память (т.к. это удобнее)
- * в физ памяти все делится на фреймы, а в виртуальной на страницы. размерами они по 4кб
- * 
- * PAGES_DIR-ы - это по сути таблицы, которые сопоставляют виртуальные адреса с физ адресами
- * PAGES_TABLE - это таблица, которая сопоставляет отдельные виртуальные страницы с физическими фреймами
- * 
- * 
-/*/
+page_dir_entry kernel_page_dir[1024] __attribute__((aligned(4096)));
+page_table_entry new_base_page_table[1024] __attribute__((aligned(4096)));
+page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(4096)));
 
-// | тут будут храниться значения мин и макс номера для страниц и фреймов
-// | TODO: скорее всего, имеются в виду мин и макс адреса в памяти для будующих страниц и фреймов 
-// ↓ ...
-static uint32_t page_frame_min;
-static uint32_t page_frame_max;
+page_table_entry *kernel_tables = (page_table_entry *)0xC0400000;
 
-// ↓ кол-во выделенных страниц; при ините pmm выставляется в 0
-static uint32_t total_alloc;
+uint8_t pmem_used[131072] __attribute__((aligned(4096)));
+const char * mem_types[] = {"ERROR","Available","Reserved","ACPI Reclaimable","NVS","Bad RAM"};
 
-// ↓ кол-во PAGES_DIR
-#define NUM_PAGES_DIRS 256
+#define pagedir_addr 768
 
-// | это кол-во фреймов в физ памяти и равносильно страниц в виртуальной памяти // 0x20000
-// | 0x10000000 - это 4гб в байтах, т.е. вся доступная физ память (ну я так понял)
-// | 0x1000 - это 4кб в байтах, по сути фулл память делим на размер страницы/фрейма, чтобы получить их кол-во
-// | TODO: делим еще на 8, т.к. ... та хрен его знает
-// ↓ P.S. далее страница/фрейм буду сокращать с/ф
-#define NUM_PAGES_FRAMES (0x10000000 / 0x1000 / 8)
+multiboot_memory_map_t *mmap;
 
-// | битмап физ памяти; каждому биту соответствует один фрейм  // 0x4000
-// | кол-во с/ф делим на 8, т.к. нам надо, чтобы было по одному биту на одну с/ф,
-// | т.е. нам нужен массив по размеру равный формуле (1бит * кол-во с/ф)
-// | ну и поскольку 1 байт это минималочка которую мы можем выделять на ячейку массива в Си, 
-// | мы просто уменьшаем кол-во ячеек в 8 раз 
-// ↓ 0 - фрейм свободен, 1 - фрейм занят
-uint8_t phys_memory_bitmap[NUM_PAGES_FRAMES / 8];
-
-// | массив PAGES_DIR-ов, в каждом таком по 1024 32бит записей
-// | TODO: выровнен по 4кб, т.к. ...
-// | TODO: каждая запись представляет из себя ...
-// ↓ ...
-static uint32_t page_dirs[NUM_PAGES_DIRS][1024] __attribute__((aligned(4096)));
-
-// | это массив флагов, каждый из которых показывает, использован ли такой-то то PAGES_DIR
-// | TODO: пока что хз зачем ... и поч uint32_t
-// ↓ ...
-static uint32_t page_dir_used[NUM_PAGES_DIRS];
-
-// | кол-во виртуальных страниц 
-// | TODO: НУ НАХЕРААААААА ОНА НУЖНАА ...
-// ↓ ...
-int mem_num_vpages;
-
-// | инит менеджера физической памяти (pmm - physical memory manager)
-// | устанавливает мин и макс номера(адреса?) с/ф, 
-// ↓ а также обнуляет битмап физ памяти
-void pmm_init(uint32_t mem_low,uint32_t mem_high) {
-
-    // ↓ 
-    page_frame_min = CEIL_DIV(mem_low, 0x1000);
-
-    // ↓
-    page_frame_max = mem_high / 0x1000;
-
-    // ↓ обнуление счетчика выделенных страниц
-    total_alloc = 0;
-
-    // ↓ обнуление битмапы физ памяти
-    memset(phys_memory_bitmap, 0, sizeof(phys_memory_bitmap));
+bool check_phys_page(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	bool r = (bool)(pmem_used[page/8] & (1 << (page%8)));
+	return r;
 }
 
-// | изменяет c текущего PAGES_DIR на другой
-// ↓ похоже, что в cr3 хранится какой-то конкретный PAGES_DIR из всех или тп
-void mem_change_page_dir(uint32_t* pd) {
+bool warn_claimed = true;
 
-    // | вычисление адреса PAGES_DIR
-    // | далее мы его положим в cr3, а туда нужно класть смещение от KERNEL_START
-    // ↓ P.S. чекай boot.asm
-    pd = (uint32_t*)(((uint32_t)pd) - KERNEL_START);
-
-    // ↓ загружает в cr3 адрес нового PAGES_DIR
-    asm volatile("mov %0, %%eax \n mov %%eax, %%cr3 \n" :: "m"(pd));
+void claim_phys_page(void *addr) {
+	// FOR DEBUGGING
+	// if (check_phys_page(addr)&&warn_claimed) {
+	//     dprintf("[WARN] Attempting to claim already claimed page: %p\n", addr);
+	// }
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	pmem_used[page/8]|=1<<(page%8);
 }
 
+void release_phys_page(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	pmem_used[page/8]&= ~(1 << (page%8));
+}
 
+uint8_t check_page_cluster(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	return pmem_used[page/8];
+}
 
+inline page_table_entry get_table_vaddr(void *vaddr) {
+	return kernel_tables[(uint32_t)vaddr/4096];
+}
 
+void paging_init(multiboot_info_t *mbi) {
+	// Этап 1:
+	// Во-первых, нам нужно сопоставить новую часть оперативной памяти, чтобы у нас было достаточно места для новой таблицы подкачки
+	kernel_page_dir[pagedir_addr].present = 1;
+	kernel_page_dir[pagedir_addr].readwrite = 1;
+	uint32_t nbpt_addr = (uint32_t)&new_base_page_table[0];
+	nbpt_addr -= 0xC0000000;
+	nbpt_addr >>=12;
+	kernel_page_dir[pagedir_addr].address = nbpt_addr;
+	for (uint16_t i = 0; i < 1023; i++) {
+		if ((i*4096)>=0x100000) {
+			new_base_page_table[i].present = 1;
+			new_base_page_table[i].readwrite = 1;
+			new_base_page_table[i].address = i;
+		}
+	}
+	new_base_page_table[1023].present = 1;
+	new_base_page_table[1023].readwrite = 1;
+	new_base_page_table[1023].address = 0x000B8;
 
+	uint32_t new_addr = (uint32_t)&kernel_page_dir[0];
+	new_addr-=0xC0000000;
+	asm volatile("mov %0, %%cr3":: "r"(new_addr));
 
-// тогда ничего сложного )) где он, этот битмап
+	// Этап 2:
+	// Далее мы выделяем 4 МБ пространства для нашей новой таблицы страниц FULL.
 
-// вместо кернел таблес у нас наш любимый битмап)
+	kernel_page_dir[pagedir_addr+1].present = 1;
+	kernel_page_dir[pagedir_addr+1].readwrite =1;
+	kernel_page_dir[pagedir_addr+1].address = (((uint32_t)&full_kernel_table_storage)-0xC0000000)>>12;
 
-// давай, приключение на 15 минут, зашли и вышли)) 
-// P.S. время 04:37
+	for (uint16_t i = 0; i < 1024; i++) {
+		full_kernel_table_storage[i].present = 1;
+		full_kernel_table_storage[i].readwrite = 1;
+		full_kernel_table_storage[i].address = (0x400000>>12)+i;
+	}
 
+    // reset cr3, чтобы он очистил кэш TLB?
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 
-// TODO: вот эту херь нужно как-то реализовать и в нашем коде
-// void *get_phys_addr(void *vaddr) {
-//     return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
-// }
+	// Этап 3:
+	// Создаем новую полностраничную таблицу, чтобы мы могли выделять элементы в любое время
+
+	memset((void*)0xC0400000,0,0x400000);
+
+	for (uint16_t i = 0; i < 1023; i++) {
+		if ((i*4096)>=0x100000) {
+			kernel_tables[(768*1024)+i].present = 1;
+			kernel_tables[(768*1024)+i].readwrite = 1;
+			kernel_tables[(768*1024)+i].address = i;
+		}
+	}
+
+	kernel_tables[(768*1024)+1023].present = 1;
+	kernel_tables[(768*1024)+1023].readwrite = 1;
+	kernel_tables[(768*1024)+1023].address = 0x000B8;
+
+	for (uint16_t i = 0; i < 1024; i++) {
+		kernel_tables[(769*1024)+i].present = 1;
+		kernel_tables[(769*1024)+i].readwrite = 1;
+		kernel_tables[(769*1024)+i].address = (0x400000>>12)+i;
+	}
+
+	// Теперь мы связываем таблицы с каталогом страниц, расположение которого не изменится
+	for (uint16_t i = 0; i < 1024; i++) {
+		kernel_page_dir[i].address = 0x400+(i);
+		kernel_page_dir[i].readwrite = 1;
+		kernel_page_dir[i].present = 1;
+        
+        // Все записи каталога страниц принадлежат пользователю, потому что мы можем установить супервизора только внутри записи таблицы страниц.
+		kernel_page_dir[i].user = 1; 
+	}
+
+    // reset cr3, чтобы он очистил кэш TLB?
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+
+	// Потрясающий! Теперь таблицы страниц по умолчанию находятся по адресам vaddr:0xC0400000 и Paddr:0x400000.
+	// Это не помешает программам (которые загружаются по адресу vaddr:0x100000), но у них по-прежнему мало памяти (сейчас нам нужно всего 8 МБ памяти)
+
+	// Разрешим нам прочитать MBI, чтобы найти карту памяти.
+	identity_map(mbi);
+	mmap = (multiboot_memory_map_t *)mbi->mmap_addr;
+
+	// Очищаем текущую карту, чтобы все записи были "затребованы"
+	memset((void *)&pmem_used[0],255,131072);
+
+	// Сканируем карту памяти на предмет областей, которые мы можем использовать для общих целей
+	for (uint8_t i = 0; i < 15; i++) {
+		uint32_t type = mmap[i].type;
+		if (mmap[i].type>5)
+			type = 2;
+		if (i>0&&mmap[i].addr==0)
+			break;
+		if (mmap[i].type==1){
+			for (uint64_t physptr = mmap[i].addr; physptr<mmap[i].addr+mmap[i].len;physptr+=4096) {
+				release_phys_page((void *)(uint32_t)physptr);
+			}
+		}
+		// vga_printf("%u: %p+%p %s\n",i,(uintptr_t)mmap[i].addr,(uintptr_t)mmap[i].len,mem_types[type]);
+	}
+
+	// Освобождаем до 8МБ (для ядра и таблиц страниц)
+	memset((void *)&pmem_used[0],255,256);
+}
+
+void identity_map(void *addr) {
+	uint32_t page = (uint32_t)addr;
+	page/=4096;
+	// Don't do anything if already mapped.
+	if (kernel_tables[page].present&&kernel_tables[page].readwrite&&kernel_tables[page].address==(uint32_t)addr>>12)
+		return;
+	warn_claimed = false;
+	claim_phys_page(addr);
+	warn_claimed = true;
+	/* volatile uint32_t directory_entry = page/1024;
+	volatile uint32_t table_entry = page % 1024; */
+	kernel_tables[page/* (directory_entry*1024)+table_entry */].address = page;
+	kernel_tables[page/* (directory_entry*1024)+table_entry */].readwrite = 1;
+	kernel_tables[page/* (directory_entry*1024)+table_entry */].present = 1;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void map_addr(void *vaddr, void *paddr) {
+	claim_phys_page(paddr);
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	uint32_t paddr_page = (uint32_t)paddr;
+	paddr_page/=4096;
+	kernel_tables[vaddr_page].address = paddr_page;
+	kernel_tables[vaddr_page].readwrite = 1;
+	kernel_tables[vaddr_page].present = 1;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void unmap_vaddr(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	release_phys_page((void *)(kernel_tables[vaddr_page].address*4096));
+	kernel_tables[vaddr_page].address = 0;
+	kernel_tables[vaddr_page].readwrite = 0;
+	kernel_tables[vaddr_page].present = 0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void trade_vaddr(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	// Не освобождаем страницу, так как программа отдала ее в другое адресное пространство
+	kernel_tables[vaddr_page].address = 0;
+	kernel_tables[vaddr_page].readwrite = 0;
+	kernel_tables[vaddr_page].present = 0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void mark_user(void *vaddr, bool user) {
+	kernel_tables[(uint32_t)vaddr/4096].user = user?1:0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
+
+void mark_write(void *vaddr, bool write) {
+	kernel_tables[(uint32_t)vaddr/4096].readwrite = write?1:0;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
+}
 
 void *get_phys_addr(void *vaddr) {
-    // return (void *)(phys_memory_bitmap[]);
+	return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
 }
 
-// 
-
-
-
-// крч не битмап все таки похоже
-// из page_dirs нам нужно достать page_dir по индексу (uint32_t)vaddr/4096
-// потом ...
-
-
-/*  (void *) 
-    (
-        (
-            kernel_tables
-                [
-                    (uint32_t)vaddr/4096
-                ]
-                .address*4096
-        )
-        +
-        (
-            (uint32_t)vaddr
-            &
-            0xFFF
-        )
-    ) 
-*/
-
-
-
-
-
-
-
-
-
-
-
-// TODO:
-// Синхронизация каталогов страниц.
-// Сбрасывает флаг принадлежности для страниц, которые используются 
-// для ядра, в каталогах, которые не являются текущим.
-// Это необходимо для предотвращения ошибок при переключении 
-// контекстов.
-void sync_page_dirs() {
-    // Проход по всем каталогам страниц.
-    for (int i = 0; i < NUM_PAGES_DIRS; ++i) {
-        // Если каталог страниц используется.
-        if (page_dir_used[i]) {
-            // Получение адреса каталога страниц.
-            uint32_t* page_dir = page_dirs[i];
-
-            // Сброс флага принадлежности для страниц 768-1023.
-            // Эти страницы используются ядром, и флаг 
-            // принадлежности должен быть сброшен для 
-            // предотвращения ошибок при переключении контекстов.
-            for (int i = 768; i < 1023; ++i) {
-                page_dir[i] = page_dir_init[i] & ~PAGE_FLAG_OWNER;
-            }
-        }
-    }
+void *find_free_phys_page() {
+	for (uint32_t k=0x800; k<1048576; k++) {
+		if (check_page_cluster((void *)(k*4096))==255)
+			k+=7;
+		else if (!check_phys_page((void *)(k*4096))) {
+			return (void *)(uintptr_t)(k*4096);
+		}
+	}
+	return 0;
 }
 
+void* map_page_to(void *vaddr) {
+	if (kernel_tables[(uint32_t)vaddr/4096].present) return 0;
 
+	void *paddr = find_free_phys_page();
+	if (!paddr) return 0;
 
-
-
-
-
-
-
-
-// ↓ возвращает физ адрес текущего PAGES_DIR
-uint32_t* mem_get_cur_byte_page_dir() {
-
-    // ↓ получаем смещение текущего PAGES_DIR от KERNEL_START 
-    uint32_t pd;
-    asm volatile("mov %%cr3, %0" : "=r"(pd));
-
-    // ↓ переводим в физ адрес
-    pd += KERNEL_START;
-
-    return (uint32_t*)pd;
+    map_addr(vaddr, paddr);
+    return vaddr;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-// ↓ сопоставляет (мапит) виртуальные и физические адреса
-void mem_map_page(uint32_t vaddr, uint32_t paddr, uint32_t flags) {
-    
-    // | сохранение адреса предыдущего PAGES_DIR
-    // ↓ это необходимо для восстановления предыдущего контекста после завершения мапинга
-    uint32_t *prev_page_dir = 0;
-
-    // ↓ если виртуальный адрес принадлежит ядру
-    if (vaddr >= KERNEL_START) {
-
-        // ↓ получение адреса текущего PAGES_DIR
-        paddr = mem_get_cur_byte_page_dir(); 
-
-        // | page_dir_init - это самый первый PAGES_DIR, он объявлен в boot.asm
-        // ↓ если текущий PAGES_DIR не является начальным
-        if (prev_page_dir != page_dir_init) {
-
-            // ↓ изменение текущего PAGES_DIR на начальный
-            mem_change_page_dir(page_dir_init);
-        }
-    }
-    
-
-
-
-
-
-
-    // TODO:
-    // Вычисление индексов каталога и таблицы страниц.
-    // Эти индексы используются для поиска соответствующих записей
-    // в каталоге и таблице страниц.
-    uint32_t pd_index = vaddr >> 22;
-    uint32_t pt_index = vaddr >> 12 & 0x3FF;
-
-    // Получение адресов каталога и таблицы страниц.
-    uint32_t* page_dir = REC_PAGE_DIR;
-    uint32_t* page_table = REC_PAGE_TABLE(pd_index);
-
-    // Если запись в каталоге страниц отсутствует.
-    // Это означает, что эта область виртуальной памяти 
-    // еще не сопоставлена с физической памятью.
-    if (!(page_dir[pd_index] & PAGE_FLAG_PRESENT)) {
-        // Выделение кадра для таблицы страниц.
-        // Таблица страниц используется для сопоставления 
-        // виртуальных страниц с физическими кадрами.
-        uint32_t pt_addr = pmm_alloc_page_frame();
-
-        // Добавление записи в каталог страниц.
-        // Эта запись содержит физический адрес таблицы страниц
-        // и флаги, определяющие права доступа к этой области 
-        // виртуальной памяти.
-        page_dir[pd_index] = pt_addr | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_OWNER | flags;
-
-        // Инвалидация кэша TLB для виртуального адреса.
-        // Это необходимо для того, чтобы операционная система 
-        // могла обновлять таблицы страниц, не затрагивая 
-        // данные, которые уже находятся в кэше.
-        invalidate(vaddr);
-
-        // Обнуление таблицы страниц.
-        // Все записи в таблице страниц должны быть 
-        // обнулены перед использованием.
-        for (uint32_t i = 0; i < 1024; ++i) {
-            page_table[i] = 0;
-        }
-    }
-
-    // Добавление записи в таблицу страниц.
-    // Эта запись содержит физический адрес кадра страницы,
-    // который будет использоваться для этой области виртуальной 
-    // памяти, а также флаги, определяющие права доступа.
-    page_table[pt_index] = paddr | PAGE_FLAG_PRESENT | flags;
-
-    // Увеличение счетчика виртуальных страниц.
-    ++mem_num_vpages;
-
-    // Инвалидация кэша TLB для виртуального адреса.
-    invalidate(vaddr);
-    
-    // Если был изменен каталог страниц.
-    if (prev_page_dir != 0) {
-        // Синхронизация каталогов страниц.
-        sync_page_dirs();
-
-        // Если предыдущий каталог страниц не является начальным.
-        if (prev_page_dir != page_dir_init) {
-            // Изменение текущего каталога страниц на предыдущий.
-            mem_change_page_dir(prev_page_dir);
-        }
-    }
+void map_page_secretly(void *vaddr, void *paddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	uint32_t paddr_page = (uint32_t)paddr;
+	paddr_page/=4096;
+	kernel_tables[vaddr_page].address = paddr_page;
+	kernel_tables[vaddr_page].readwrite = 1;
+	kernel_tables[vaddr_page].present = 1;
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
-
-
-
-
-
-
-
-
-
-
-
-// TODO:
-// Выделение кадра страницы. 
-// Эта функция ищет свободный кадр в физической памяти 
-// и возвращает его физический адрес.
-uint32_t pmm_alloc_page_frame() {
-    // Вычисление начального и конечного байта в битовой карте.
-    uint32_t start = page_frame_min / 8 + ((page_frame_min & 7) != 0 ? 1:0);
-    uint32_t end = page_frame_max / 8 + ((page_frame_max & 7) != 0 ? 1:0);
-    
-    // Проход по всем байтам в битовой карте.
-    for (uint32_t b = start; b < end; ++b) {
-        // Получение байта из битовой карты.
-        uint8_t byte = phys_memory_bitmap[b];
-
-        // Если байт полностью заполнен.
-        if (byte == 0xFF) {
-            // Переход к следующему байту.
-            continue;
-        }
-
-        // Проход по всем битам в байте.
-        for (uint32_t i = 0; i < 9; ++i) {
-            // Проверка бита на занятость.
-            bool used = byte >> i & 1;
-           
-            // Если бит свободен.
-            if (!used) {
-                // Установка бита в 1.
-                byte ^= (01 ^ byte) & (1 << i);
-
-                // Запись обновленного байта в битовую карту.
-                phys_memory_bitmap[b] = byte;
-
-                // Увеличение счетчика выделенных страниц.
-                ++total_alloc;
-
-                // Вычисление физического адреса кадра страницы.
-                uint16_t addr = (b * 8 * i) * 0x1000;
-
-                // Возврат физического адреса.
-                return addr;
-            }
-        }
-    }
-    
-    // Если свободные кадры не найдены.
-    return 0;
+void unmap_secret_page(void *vaddr, size_t pages) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	for (size_t i = 0; i < pages; i++) {
+		kernel_tables[vaddr_page+i].address = 0;
+		kernel_tables[vaddr_page+i].readwrite = 0;
+		kernel_tables[vaddr_page+i].present = 0;
+	}
+	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
-
-
-
-
-
-
-
-
-
-
-
-// TODO:
-// Инициализация памяти. 
-// Устанавливает начальные значения каталога страниц, 
-// инициализирует менеджер физической памяти, а также 
-// обнуляет массивы каталогов и флагов использования.
-void memory_init(uint32_t mem_high, uint32_t phys_alloc_start) {
-    // Обнуление счетчика виртуальных страниц.
-    mem_num_vpages = 0;
-
-    // Инициализация первой записи каталога страниц.
-    // Эта запись используется для сопоставления нижней 
-    // части виртуальной памяти.
-    page_dir_init[0] = 0;
-
-    // Инвалидация кэша TLB для адреса 0.
-    // Это необходимо для того, чтобы операционная 
-    // система могла обновлять таблицы страниц, 
-    // не затрагивая данные, которые уже находятся в кэше.
-    invalidate(0);
-
-    // Инициализация последней записи каталога страниц.
-    // Эта запись используется для сопоставления верхней 
-    // части виртуальной памяти.
-    page_dir_init[1023] = ((uint32_t) page_dir_init - KERNEL_START) | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE;
-
-    // Инвалидация кэша TLB для адреса 0xFFFF000.
-    invalidate(0xFFFF000);
-
-    // Инициализация менеджера физической памяти.
-    pmm_init(phys_alloc_start, mem_high);
-
-    // Обнуление массива каталогов страниц.
-    memset(page_dirs, 0, 0x1000 * NUM_PAGES_DIRS);
-
-    // Обнуление массива флагов использования каталогов страниц.
-    memset(page_dir_used, 0, NUM_PAGES_DIRS);
+void *map_paddr(void *paddr, size_t pages) {
+	if (!pages)
+		return 0;
+	uint32_t paddr_page = (uint32_t)paddr;
+	paddr_page/=4096;
+	for(uint32_t i = 786432; i < 1048576; i++) {
+		if (!kernel_tables[i].present) {
+			 size_t successful_pages = 1;
+			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (successful_pages==pages)
+						break;
+				if (!kernel_tables[j].present) {
+					successful_pages++;
+				}
+				else
+					break;
+			}
+			if (successful_pages==pages) {
+				for (uint32_t step=0; step<pages;step++) {
+					map_page_secretly((void *)(uintptr_t)((i+step)*4096),(void *)(uintptr_t)((paddr_page+step)*4096));
+				}
+				return (void *)(uintptr_t)(i*4096)+((uintptr_t)paddr&0xFFF);
+			}
+		}
+	}
+	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-// TODO:
-// Инвалидация кэша TLB для виртуального адреса. 
-// Эта функция сбрасывает кэш TLB, чтобы операционная 
-// система могла обновлять таблицы страниц, не затрагивая 
-// данные, которые уже находятся в кэше.
-void invalidate(uint32_t vaddr) {
-    asm volatile("invlpg %0" :: "m"(vaddr));
-}
-
-
-
-
-
-
-
-
-typedef struct {
-    size_t bytes;
-    uint8_t cur_bit;
-} free_frame;
-
-free_frame find_free_frame() {
-    for (int i = 0; i < NUM_PAGES_FRAMES / 8; i++) {
-        if (phys_memory_bitmap[i] != 0xFF) {
-            for (int j = 0; j < 8; j++) {
-                if (!(phys_memory_bitmap[i] & (1 << j))) {
-                    free_frame fr;
-                    fr.bytes = i*8; fr.cur_bit = j;
-                    return fr;
-                } 
-            }
-        }
-    }
-    free_frame fr;
-    fr.bytes = fr.cur_bit = 0;
-    return fr;
-}
-
-// передавайте мне bytes+1 из find_free_frame, если его ответ не подошел
-free_frame find_free_frame_with_offset(size_t bytes) {
-    for (int i = bytes; i < NUM_PAGES_FRAMES / 8; i++) {
-        if (phys_memory_bitmap[i] != 0xFF) {
-            for (int j = 0; j < 8; j++) {
-                if (!(phys_memory_bitmap[i] & (1 << j))) {
-                    free_frame fr;
-                    fr.bytes = i*8; fr.cur_bit = j;
-                    return fr;
-                } 
-            }
-        }
-    }
-    free_frame fr;
-    fr.bytes = fr.cur_bit = 0;
-    return fr;
-}
-
-// void* alloc_page(size_t pages) {
-
-//     // если pages = 0, то идите нах
-//     if (!pages) return 0;
-
-//     // счетчик свободных фреймов подряд 
-//     size_t free_frames = 0;
-//     int ii = 0;    
-
-//     // цикл по байтам в битмапе
-//     for (int i = 0; (i < NUM_PAGES_FRAMES / 8); i++) {
-
-//         // если байт не полный, то...
-//         if (phys_memory_bitmap[i] != 0xFF) {
-
-//             // проходимся по байту
-//             for (ii = 0; ii < 8; ++ii) {
-
-//                 // если бит 0, то ++free_frames, но если вдруг нам нужно фреймов больше чем есть в этом байте
-//                 // то вот в этом и проблема пока что, прикол в том, что нам нужна ii, ее можно вынести
-//                 if (!(phys_memory_bitmap[i] & (1 << ii))) ++free_frames;
-//             }
-//         }
-//     }   //    ^
-// } // а это че |     
-
 
 void* alloc_page(size_t pages) {
-    // если pages = 0, то выходим из функции 
-    if (!pages) {
-        return NULL;
-    }
-    // счетчик свободных фреймов подряд
-    size_t free_frames_count = 0;
-
-    // флаг, для поиска 'начала последовательности' свободных фреймов
-    bool find_start = true;
-
-    // кол-во байтов до байта, в котором есть свободные биты
-    size_t bytes = 0; 
-    // первый свободный бит в bytes+1    // +1 
-    uint8_t cur_bit = 0;
-
-    // цикл по байтам в битмапе
-    // вычисляет с какого байта и бита в нём, далее идут свободные биты(в последующих байтах)
-    for (int i = 0; (i < NUM_PAGES_FRAMES / 8) && free_frames_count != pages; i++) {
-        // если байт полный, то пропускаем его и переходим к следующему
-        if (phys_memory_bitmap[i] == 0xFF) {
-            continue;
-        }
-        // проходимся по битам в байте, при условии, что мы не нашли нужное количество свободных фреймов
-        for (int ii = 0; ii < 8 && free_frames_count != pages; ++ii) { 
-            // если бит(ii + 1) == 0, то ++free_frames_count
-            if (!(phys_memory_bitmap[i] & (1 << ii))) {
-                // если флаг поиска == true, то ...
-                if (find_start) {
-                    // устанавливаем смещение байта и бита, для начала последовательности
-                    bytes = i;
-                    cur_bit = ii;
-                    // отключаем флаг поиска
-                    find_start = false; 
-                }
-                ++free_frames_count;
-            }
-            
-            // в случае, когда у нас не хватает свободных битов(фреймов) ПОДРЯД
-            else {
-                // включаем флаг поиска
-                find_start = true;
-                // обнуляем счётчик свободных фреймов подряд 
-                free_frames_count = 0; 
-            }
-        }
-    }
-    
-    if (free_frames_count == pages) {
-        // bytes+1 это байт в котором начинаются свободные биты
-        // cur_bit бит с которого начинаются свободные биты
-
-        // смещение с которого начинаются свободные фреймы, количество которых равно pages
-        size_t free_frames_offset = bytes * 8 + cur_bit; 
-        // ТУТ ВОТ НАВЕРНОЕ НУЖНО ВЫДЕЛИТЬ ПАМЯТЬ
-        // равной pages, начиная с free_frames_offset
-    } else {
-        // PANIC("MEM FULL");
-    }
-
+	if (!pages)
+		return 0;
+	// Сначала найдите последовательные виртуальные страницы в памяти ядра.
+	for(uint32_t i = 786432; i < 1048576; i++) {
+		if (!kernel_tables[i].present) {
+			 size_t successful_pages = 1;
+			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (successful_pages==pages)
+						break;
+				if (!kernel_tables[j].present) {
+					successful_pages++;
+				}
+				else
+					break;
+			}
+			if (successful_pages==pages) {
+				for (uint32_t step=0; step<pages;step++) {
+					void *paddr = find_free_phys_page();
+					if (!paddr) {
+						return 0;
+					}
+					map_addr((void *)((i+step)*4096), paddr);
+				}
+				return (void *)(i*4096);
+			}
+		}
+	}
+	return 0;
 }
 
-    // map_addr((void *)((i+step)*4096), paddr);
-    
-    //return (void *)(i*4096);
+void free_page(void *start, size_t pages) {
+	for (uint32_t i = 0; i < pages; i++) {
+		unmap_vaddr((void *)((uint32_t)start+(i*4096)));
+	}
+}
 
+void *calloc_page(size_t pages) {
+	void *out = alloc_page(pages);
+	memset(out, 0, 4096*pages);
+	return out;
+}
 
+// Аналогично alloc_page, но требует, чтобы физические страницы были последовательными.
+void *alloc_sequential(size_t pages) {
+	if (!pages)
+		return 0;
+	for(uint32_t i = 786432; i < 1048576; i++) {
+		if (!kernel_tables[i].present) {
+			size_t successful_pages = 1;
+			for (uint32_t j = i+1; j-i<pages+1; j++) {
+				if (successful_pages==pages)
+						break;
+				if (!kernel_tables[j].present) {
+					successful_pages++;
+				}
+				else
+					break;
+			}
+			if (successful_pages==pages) {
+				for (uint32_t j = 4096; j < 1048576; j++) {
+					successful_pages = 1;
+					if (check_page_cluster((void *)(j*4096))==255)
+						j+=7;
+					else if (!check_phys_page((void *)(j*4096))) {
+						for (uint32_t k = j+1; k-j<pages+1; k++) {
+							if (successful_pages==pages)
+									break;
+							if (!check_phys_page((void *)(k*4096))) {
+								successful_pages++;
+							}
+							else
+								break;
+						}
+						if (successful_pages==pages) {
+							for (uint32_t k = 0; k < pages; k++) {
+								map_addr((void *)(uintptr_t)((i+k)*4096),(void *)(uintptr_t)((j+k)*4096));
+							}
+							return (void *)(i*4096);
+						}
+					}
+				}
+			}
+		}
+	}
+	return 0;
+}
 
+uint32_t *get_current_tables() {
+	return (uint32_t *)kernel_tables;
+}
 
-                        // if (phys_memory_bitmap[i] != 0xFF) {
-                        //     for (int j = 0; j < 8; j++) {
-                        //         if (free_frames == pages) break;
-                        //         if (!(phys_memory_bitmap[i] & (1 << j))) ++free_frames;
-                        //         else break;
-                        //     }
-                        //     if (free_frames == pages) {
+void switch_tables(void *new) {
+	kernel_tables = new;
+}
 
-                        //     }
-                        // }
+void use_kernel_map() {
+	kernel_tables = (page_table_entry *)0xC0400000;
+	asm volatile("mov %0, %%cr3"::"r"(get_phys_addr(&kernel_page_dir[0])));
+}
 
+void *clone_tables() {
+	void * new = alloc_sequential(1025);
+	memset(new,0,4096*1025);
+	page_table_entry * new_page_tables = new+4096;
+	page_dir_entry * new_page_dir = new;
+	memcpy(new_page_tables,kernel_tables,1024*4096);
+	memset(new_page_dir,0,4096);
+	for (uint32_t i = 0; i < 1024; i++) {
+		page_dir_entry *pde = &new_page_dir[i];
+		pde->user = 1;
+		pde->present = 1;
+		pde->readwrite = 1;
+		pde->address = ((uint32_t)get_phys_addr(new+4096)/0x1000)+i;
+	}
 
+	uint32_t new_addr = (uint32_t)get_phys_addr(new);
+	switch_tables(new+4096);
+	asm volatile("mov %0, %%cr3":: "r"(new_addr));
 
+	return (void *)new_addr;
+}
 
+uint32_t free_pages() {
+	uint32_t retval = 0;
+	for (uint32_t i = 0; i < 131072; i++) {
+		if (!pmem_used[i])
+			retval+=8;
+		else if (pmem_used[i]!=(uint8_t)255) {
+			for (uint8_t j = 0; j < 8; j++) {
+				if (!check_phys_page((void *)(i*8*4096)+(j*4096)))
+					retval++;
+			}
+		}
+	}
+	return retval;
+}
 
-// if (phys_memory_bitmap[i] == 0xFF) {
-//  continue;
-// }
+void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
+	int64_t amt_pages = (int64_t)new_pages - (int64_t)old_pages;
+	uint32_t ptr_page = (uint32_t)ptr/4096;
+	if (old_pages==new_pages)
+		return ptr;
+	else if (old_pages<new_pages) {
+		bool failed = false;
+		for (uint32_t i = 0; i < (uint32_t)amt_pages; i++) {
+			if (kernel_tables[ptr_page+old_pages+i].present) {
+				failed = true;
+				break;
+			}
+		}
+		if (failed) {
+			void * ret = alloc_page(new_pages);
+			memcpy(ret,ptr,old_pages*4096);
+			free_page(ptr,old_pages);
+			return ret;
+		} else {
+			for (uint32_t i = 0; i < (uint32_t)amt_pages; i++) {
+				map_page_to(ptr+(old_pages*4096)+(i*4096));
+			}
+			return ptr;
+		}
+	} else {
+		for (int64_t i = 0; i < -amt_pages; i++) {
+			unmap_vaddr(ptr+(new_pages*4096)+(i*4096));
+		}
+		return ptr;
+	}
+}
 
+void free_all_user_pages() {
+	for (uint32_t i = 0; i < 1024*1024; i++) {
+		if (kernel_tables[i].user&&kernel_tables[i].present) {
+			free_page((void *)(uintptr_t)(i*4096),1);
+		}
+	}
+}
 
+uint8_t clone_data[4096];
 
-// // по сути надо просто переписать с учетом того, что у нас битмап, а не таблица   // пфф всего-то...
-// void* alloc_page_togo_chelika(size_t pages) { // и весь прикол в таблице
-//     if (!pages) return 0;
+bool clone_user_pages() {
+	for (uint32_t i = 0; i < 1024*1024; i++) {
+		if (kernel_tables[i].user&&kernel_tables[i].present) {
+			// Find free physical page
+			void *paddr = find_free_phys_page();
+			if (!paddr) {
+				return false;
+			}
 
-//     // вместо нашего битмапа, просто идет по таблице
-//     for(uint32_t i = 786432; i < 1048576; i++) {
+			// Copy the data from the original page
+			memcpy(clone_data, (void *)(i*4096), 4096);
 
-//         // если не занят фрейм
-//         if (!kernel_tables[i].present) {
+			// Swap the virtual address' physical page for the new physical page
+			kernel_tables[i].address = (uint32_t)paddr>>12;
+			claim_phys_page(paddr);
 
-//             // то создаем счетчик свобоных фреймов подряд со сразу первым
-//             size_t successful_pages = 1;
+			// Set page to writeable when we are copying it
+			uint8_t rw = kernel_tables[i].readwrite;
+			kernel_tables[i].readwrite = true;
 
-//             // идем дальше по той же таблице 
-//             for (uint32_t j = i+1; j-i<pages+1; j++) {
+			// Flush TLB to update the map
+			asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
 
-//                 // если колво найденных свободных равно нужному то выходим из цикла
-//                 if (successful_pages==pages) break;
+			// Copy the data into the new page
+			memcpy((void *)(i*4096), clone_data, 4096);
 
-//                 // если нашелся не занятый фрейм то добавляем и его
-//                 if (!kernel_tables[j].present) ++successful_pages;
+			// Set page's write permission back to what it was before.
+			// This will be updated next time we flush the TLB.
+			kernel_tables[i].readwrite = rw;
+		}
+	}
+	// Fix last changed page's write permission
+	asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
+	return true;
+}
 
-//                 // если ни то, ни другое, то значит наткнулись на занятый фрейм, когда нам надо еще
-//                 // следовательно ломаем цикл
-//                 else break;
-//             }
+bool check_user(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	return kernel_tables[vaddr_page].user;
+}
 
-//             // когда цикл сломан, мы чекаем, как он был сломан
-//             // если нужное колво собрано, то аллоцируем, а иначе новая итерация всего самого первого цикла
-//             if (successful_pages==pages) {
-
-//                 // тут аллокация, пох, у нас по другому
-            
-//             }
-            
-//         }
-//     }
-//     // PANIC("OUT OF MEMORY");
-//     return 0;
-// }
+uint8_t get_page_permissions(void *vaddr) {
+	uint32_t vaddr_page = (uint32_t)vaddr;
+	vaddr_page/=4096;
+	return kernel_tables[vaddr_page].present |
+			(kernel_tables[vaddr_page].readwrite<<1) |
+			(kernel_tables[vaddr_page].user<<2);
+}

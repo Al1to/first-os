@@ -11,6 +11,10 @@ typedef struct {
 } heap_t;
 
 heap_t heap_create(uint32_t pages);
+void   heap_free(heap_t heap);
+
+void   set_current_heap(heap_t heap);
+heap_t get_current_heap();
 
 void* malloc(size_t size);
 void  free(void *ptr);

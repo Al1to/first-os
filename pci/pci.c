@@ -15,7 +15,7 @@ pci_classname classnames[] = {
 	{0x01, 0x03, "IPI Bus Controller"},
 	{0x01, 0x04, "RAID Controller"},
 	{0x01, 0x05, "ATA Controller"},
-	{0x01, 0x06, "Serial ATA Controller"},  // TODO: SATA drv reg to pci
+	{0x01, 0x06, "Serial ATA Controller"},
 	{0x01, 0x07, "Serial Attached SCSI Controller"},
 	{0x01, 0x08, "Non-Volatile Memory Controller"},
 	{0x01, 0x80, "Other Mass Storage Controller"},
@@ -68,7 +68,7 @@ pci_classname classnames[] = {
 	{0x08, 0x05, "SD Host Controller"},
 	{0x08, 0x07, "IOMMU"},
 	{0x08, 0x80, "Other Base System Peripheral"},
-	{0x09, 0x00, "Keyboard Controller"},  // TODO: Keyboard drv reg to pci
+	{0x09, 0x00, "Keyboard Controller"},
 	{0x09, 0x01, "Digitizer Pen"},
 	{0x09, 0x02, "Mouse Controller"},
 	{0x09, 0x03, "Scanner Controller"},
@@ -118,9 +118,6 @@ pci_classname classnames[] = {
 	{0x11, 0x20, "Signal Processing Management"},
 	{0x11, 0x80, "Other Signal Processing Controller"},
 }; 
-
-// все что выше, это всякая дичь на которую в целом пофиг
-
 
 // эта функа просто ищет в этом массиве нужный драйвер, ща чуть выше
 const char *pci_find_name(uint8_t class, uint8_t subclass) { 
