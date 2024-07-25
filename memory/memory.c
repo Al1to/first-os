@@ -1,12 +1,12 @@
 #include "./memory.h"
 
-page_dir_entry kernel_page_dir[1024] __attribute__((aligned(4096)));
-page_table_entry new_base_page_table[1024] __attribute__((aligned(4096)));
-page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(4096)));
+page_dir_entry kernel_page_dir[1024] __attribute__((aligned(0x1000)));
+page_table_entry new_base_page_table[1024] __attribute__((aligned(0x1000)));
+page_table_entry full_kernel_table_storage[1024] __attribute__((aligned(0x1000)));
 
 page_table_entry *kernel_tables = (page_table_entry *)0xC0400000;
 
-uint8_t pmem_used[131072] __attribute__((aligned(4096)));
+uint8_t pmem_used[131072] __attribute__((aligned(0x1000)));
 const char * mem_types[] = {"ERROR","Available","Reserved","ACPI Reclaimable","NVS","Bad RAM"};
 
 #define pagedir_addr 768
@@ -15,7 +15,7 @@ multiboot_memory_map_t *mmap;
 
 bool check_phys_page(void *addr) {
 	uint32_t page = (uint32_t)addr;
-	page/=4096;
+	page/=0x1000;
 	bool r = (bool)(pmem_used[page/8] & (1 << (page%8)));
 	return r;
 }
@@ -28,24 +28,24 @@ void claim_phys_page(void *addr) {
 	//     dprintf("[WARN] Attempting to claim already claimed page: %p\n", addr);
 	// }
 	uint32_t page = (uint32_t)addr;
-	page/=4096;
+	page/=0x1000;
 	pmem_used[page/8]|=1<<(page%8);
 }
 
 void release_phys_page(void *addr) {
 	uint32_t page = (uint32_t)addr;
-	page/=4096;
+	page/=0x1000;
 	pmem_used[page/8]&= ~(1 << (page%8));
 }
 
 uint8_t check_page_cluster(void *addr) {
 	uint32_t page = (uint32_t)addr;
-	page/=4096;
+	page/=0x1000;
 	return pmem_used[page/8];
 }
 
 inline page_table_entry get_table_vaddr(void *vaddr) {
-	return kernel_tables[(uint32_t)vaddr/4096];
+	return kernel_tables[(uint32_t)vaddr/0x1000];
 }
 
 void paging_init(multiboot_info_t *mbi) {
@@ -58,7 +58,7 @@ void paging_init(multiboot_info_t *mbi) {
 	nbpt_addr >>=12;
 	kernel_page_dir[pagedir_addr].address = nbpt_addr;
 	for (uint16_t i = 0; i < 1023; i++) {
-		if ((i*4096)>=0x100000) {
+		if ((i*0x1000)>=0x100000) {
 			new_base_page_table[i].present = 1;
 			new_base_page_table[i].readwrite = 1;
 			new_base_page_table[i].address = i;
@@ -94,7 +94,7 @@ void paging_init(multiboot_info_t *mbi) {
 	memset((void*)0xC0400000,0,0x400000);
 
 	for (uint16_t i = 0; i < 1023; i++) {
-		if ((i*4096)>=0x100000) {
+		if ((i*0x1000)>=0x100000) {
 			kernel_tables[(768*1024)+i].present = 1;
 			kernel_tables[(768*1024)+i].readwrite = 1;
 			kernel_tables[(768*1024)+i].address = i;
@@ -132,7 +132,7 @@ void paging_init(multiboot_info_t *mbi) {
 	mmap = (multiboot_memory_map_t *)mbi->mmap_addr;
 
 	// Очищаем текущую карту, чтобы все записи были "затребованы"
-	memset((void *)&pmem_used[0],255,131072);
+	memset((void *)&pmem_used[0],255,0x20000);
 
 	// Сканируем карту памяти на предмет областей, которые мы можем использовать для общих целей
 	for (uint8_t i = 0; i < 15; i++) {
@@ -142,7 +142,7 @@ void paging_init(multiboot_info_t *mbi) {
 		if (i>0&&mmap[i].addr==0)
 			break;
 		if (mmap[i].type==1){
-			for (uint64_t physptr = mmap[i].addr; physptr<mmap[i].addr+mmap[i].len;physptr+=4096) {
+			for (uint64_t physptr = mmap[i].addr; physptr<mmap[i].addr+mmap[i].len;physptr+=0x1000) {
 				release_phys_page((void *)(uint32_t)physptr);
 			}
 		}
@@ -155,7 +155,7 @@ void paging_init(multiboot_info_t *mbi) {
 
 void identity_map(void *addr) {
 	uint32_t page = (uint32_t)addr;
-	page/=4096;
+	page/=0x1000;
 	// Don't do anything if already mapped.
 	if (kernel_tables[page].present&&kernel_tables[page].readwrite&&kernel_tables[page].address==(uint32_t)addr>>12)
 		return;
@@ -173,9 +173,9 @@ void identity_map(void *addr) {
 void map_addr(void *vaddr, void *paddr) {
 	claim_phys_page(paddr);
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
+	vaddr_page/=0x1000;
 	uint32_t paddr_page = (uint32_t)paddr;
-	paddr_page/=4096;
+	paddr_page/=0x1000;
 	kernel_tables[vaddr_page].address = paddr_page;
 	kernel_tables[vaddr_page].readwrite = 1;
 	kernel_tables[vaddr_page].present = 1;
@@ -184,8 +184,8 @@ void map_addr(void *vaddr, void *paddr) {
 
 void unmap_vaddr(void *vaddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
-	release_phys_page((void *)(kernel_tables[vaddr_page].address*4096));
+	vaddr_page/=0x1000;
+	release_phys_page((void *)(kernel_tables[vaddr_page].address*0x1000));
 	kernel_tables[vaddr_page].address = 0;
 	kernel_tables[vaddr_page].readwrite = 0;
 	kernel_tables[vaddr_page].present = 0;
@@ -194,7 +194,7 @@ void unmap_vaddr(void *vaddr) {
 
 void trade_vaddr(void *vaddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
+	vaddr_page/=0x1000;
 	// Не освобождаем страницу, так как программа отдала ее в другое адресное пространство
 	kernel_tables[vaddr_page].address = 0;
 	kernel_tables[vaddr_page].readwrite = 0;
@@ -203,32 +203,32 @@ void trade_vaddr(void *vaddr) {
 }
 
 void mark_user(void *vaddr, bool user) {
-	kernel_tables[(uint32_t)vaddr/4096].user = user?1:0;
+	kernel_tables[(uint32_t)vaddr/0x1000].user = user?1:0;
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
 void mark_write(void *vaddr, bool write) {
-	kernel_tables[(uint32_t)vaddr/4096].readwrite = write?1:0;
+	kernel_tables[(uint32_t)vaddr/0x1000].readwrite = write?1:0;
 	asm volatile("movl %cr3, %ecx; movl %ecx, %cr3");
 }
 
 void *get_phys_addr(void *vaddr) {
-	return (void *)((kernel_tables[(uint32_t)vaddr/4096].address*4096)+((uint32_t)vaddr&0xFFF));
+	return (void *)((kernel_tables[(uint32_t)vaddr/0x1000].address*0x1000)+((uint32_t)vaddr&0xFFF));
 }
 
 void *find_free_phys_page() {
 	for (uint32_t k=0x800; k<1048576; k++) {
-		if (check_page_cluster((void *)(k*4096))==255)
+		if (check_page_cluster((void *)(k*0x1000))==255)
 			k+=7;
-		else if (!check_phys_page((void *)(k*4096))) {
-			return (void *)(uintptr_t)(k*4096);
+		else if (!check_phys_page((void *)(k*0x1000))) {
+			return (void *)(uintptr_t)(k*0x1000);
 		}
 	}
 	return 0;
 }
 
 void* map_page_to(void *vaddr) {
-	if (kernel_tables[(uint32_t)vaddr/4096].present) return 0;
+	if (kernel_tables[(uint32_t)vaddr/0x1000].present) return 0;
 
 	void *paddr = find_free_phys_page();
 	if (!paddr) return 0;
@@ -239,9 +239,9 @@ void* map_page_to(void *vaddr) {
 
 void map_page_secretly(void *vaddr, void *paddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
+	vaddr_page/=0x1000;
 	uint32_t paddr_page = (uint32_t)paddr;
-	paddr_page/=4096;
+	paddr_page/=0x1000;
 	kernel_tables[vaddr_page].address = paddr_page;
 	kernel_tables[vaddr_page].readwrite = 1;
 	kernel_tables[vaddr_page].present = 1;
@@ -250,7 +250,7 @@ void map_page_secretly(void *vaddr, void *paddr) {
 
 void unmap_secret_page(void *vaddr, size_t pages) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
+	vaddr_page/=0x1000;
 	for (size_t i = 0; i < pages; i++) {
 		kernel_tables[vaddr_page+i].address = 0;
 		kernel_tables[vaddr_page+i].readwrite = 0;
@@ -263,8 +263,8 @@ void *map_paddr(void *paddr, size_t pages) {
 	if (!pages)
 		return 0;
 	uint32_t paddr_page = (uint32_t)paddr;
-	paddr_page/=4096;
-	for(uint32_t i = 786432; i < 1048576; i++) {
+	paddr_page/=0x1000;
+	for(uint32_t i = 0xC0000; i < 0x100000; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
@@ -278,9 +278,9 @@ void *map_paddr(void *paddr, size_t pages) {
 			}
 			if (successful_pages==pages) {
 				for (uint32_t step=0; step<pages;step++) {
-					map_page_secretly((void *)(uintptr_t)((i+step)*4096),(void *)(uintptr_t)((paddr_page+step)*4096));
+					map_page_secretly((void *)(uintptr_t)((i+step)*0x1000),(void *)(uintptr_t)((paddr_page+step)*0x1000));
 				}
-				return (void *)(uintptr_t)(i*4096)+((uintptr_t)paddr&0xFFF);
+				return (void *)(uintptr_t)(i*0x1000)+((uintptr_t)paddr&0xFFF);
 			}
 		}
 	}
@@ -291,7 +291,7 @@ void* alloc_page(size_t pages) {
 	if (!pages)
 		return 0;
 	// Сначала найдите последовательные виртуальные страницы в памяти ядра.
-	for(uint32_t i = 786432; i < 1048576; i++) {
+	for(uint32_t i = 0xC0000; i < 0x100000; i++) {
 		if (!kernel_tables[i].present) {
 			 size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
@@ -309,9 +309,9 @@ void* alloc_page(size_t pages) {
 					if (!paddr) {
 						return 0;
 					}
-					map_addr((void *)((i+step)*4096), paddr);
+					map_addr((void *)((i+step)*0x1000), paddr);
 				}
-				return (void *)(i*4096);
+				return (void *)(i*0x1000);
 			}
 		}
 	}
@@ -320,13 +320,13 @@ void* alloc_page(size_t pages) {
 
 void free_page(void *start, size_t pages) {
 	for (uint32_t i = 0; i < pages; i++) {
-		unmap_vaddr((void *)((uint32_t)start+(i*4096)));
+		unmap_vaddr((void *)((uint32_t)start+(i*0x1000)));
 	}
 }
 
 void *calloc_page(size_t pages) {
 	void *out = alloc_page(pages);
-	memset(out, 0, 4096*pages);
+	memset(out, 0, 0x1000*pages);
 	return out;
 }
 
@@ -334,7 +334,7 @@ void *calloc_page(size_t pages) {
 void *alloc_sequential(size_t pages) {
 	if (!pages)
 		return 0;
-	for(uint32_t i = 786432; i < 1048576; i++) {
+	for(uint32_t i = 0xC0000; i < 0x100000; i++) {
 		if (!kernel_tables[i].present) {
 			size_t successful_pages = 1;
 			for (uint32_t j = i+1; j-i<pages+1; j++) {
@@ -347,15 +347,15 @@ void *alloc_sequential(size_t pages) {
 					break;
 			}
 			if (successful_pages==pages) {
-				for (uint32_t j = 4096; j < 1048576; j++) {
+				for (uint32_t j = 0x1000; j < 0x100000; j++) {
 					successful_pages = 1;
-					if (check_page_cluster((void *)(j*4096))==255)
+					if (check_page_cluster((void *)(j*0x1000))==255)
 						j+=7;
-					else if (!check_phys_page((void *)(j*4096))) {
+					else if (!check_phys_page((void *)(j*0x1000))) {
 						for (uint32_t k = j+1; k-j<pages+1; k++) {
 							if (successful_pages==pages)
 									break;
-							if (!check_phys_page((void *)(k*4096))) {
+							if (!check_phys_page((void *)(k*0x1000))) {
 								successful_pages++;
 							}
 							else
@@ -363,9 +363,9 @@ void *alloc_sequential(size_t pages) {
 						}
 						if (successful_pages==pages) {
 							for (uint32_t k = 0; k < pages; k++) {
-								map_addr((void *)(uintptr_t)((i+k)*4096),(void *)(uintptr_t)((j+k)*4096));
+								map_addr((void *)(uintptr_t)((i+k)*0x1000),(void *)(uintptr_t)((j+k)*0x1000));
 							}
-							return (void *)(i*4096);
+							return (void *)(i*0x1000);
 						}
 					}
 				}
@@ -390,21 +390,21 @@ void use_kernel_map() {
 
 void *clone_tables() {
 	void * new = alloc_sequential(1025);
-	memset(new,0,4096*1025);
-	page_table_entry * new_page_tables = new+4096;
+	memset(new,0,0x1000*1025);
+	page_table_entry * new_page_tables = new+0x1000;
 	page_dir_entry * new_page_dir = new;
-	memcpy(new_page_tables,kernel_tables,1024*4096);
-	memset(new_page_dir,0,4096);
+	memcpy(new_page_tables,kernel_tables,1024*0x1000);
+	memset(new_page_dir,0,0x1000);
 	for (uint32_t i = 0; i < 1024; i++) {
 		page_dir_entry *pde = &new_page_dir[i];
 		pde->user = 1;
 		pde->present = 1;
 		pde->readwrite = 1;
-		pde->address = ((uint32_t)get_phys_addr(new+4096)/0x1000)+i;
+		pde->address = ((uint32_t)get_phys_addr(new+0x1000)/0x1000)+i;
 	}
 
 	uint32_t new_addr = (uint32_t)get_phys_addr(new);
-	switch_tables(new+4096);
+	switch_tables(new+0x1000);
 	asm volatile("mov %0, %%cr3":: "r"(new_addr));
 
 	return (void *)new_addr;
@@ -412,12 +412,12 @@ void *clone_tables() {
 
 uint32_t free_pages() {
 	uint32_t retval = 0;
-	for (uint32_t i = 0; i < 131072; i++) {
+	for (uint32_t i = 0; i < 0x20000; i++) {
 		if (!pmem_used[i])
 			retval+=8;
 		else if (pmem_used[i]!=(uint8_t)255) {
 			for (uint8_t j = 0; j < 8; j++) {
-				if (!check_phys_page((void *)(i*8*4096)+(j*4096)))
+				if (!check_phys_page((void *)(i*8*0x1000)+(j*0x1000)))
 					retval++;
 			}
 		}
@@ -427,7 +427,7 @@ uint32_t free_pages() {
 
 void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
 	int64_t amt_pages = (int64_t)new_pages - (int64_t)old_pages;
-	uint32_t ptr_page = (uint32_t)ptr/4096;
+	uint32_t ptr_page = (uint32_t)ptr/0x1000;
 	if (old_pages==new_pages)
 		return ptr;
 	else if (old_pages<new_pages) {
@@ -440,18 +440,18 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
 		}
 		if (failed) {
 			void * ret = alloc_page(new_pages);
-			memcpy(ret,ptr,old_pages*4096);
+			memcpy(ret,ptr,old_pages*0x1000);
 			free_page(ptr,old_pages);
 			return ret;
 		} else {
 			for (uint32_t i = 0; i < (uint32_t)amt_pages; i++) {
-				map_page_to(ptr+(old_pages*4096)+(i*4096));
+				map_page_to(ptr+(old_pages*0x1000)+(i*0x1000));
 			}
 			return ptr;
 		}
 	} else {
 		for (int64_t i = 0; i < -amt_pages; i++) {
-			unmap_vaddr(ptr+(new_pages*4096)+(i*4096));
+			unmap_vaddr(ptr+(new_pages*0x1000)+(i*0x1000));
 		}
 		return ptr;
 	}
@@ -460,12 +460,12 @@ void *realloc_page(void *ptr, uint32_t old_pages, uint32_t new_pages) {
 void free_all_user_pages() {
 	for (uint32_t i = 0; i < 1024*1024; i++) {
 		if (kernel_tables[i].user&&kernel_tables[i].present) {
-			free_page((void *)(uintptr_t)(i*4096),1);
+			free_page((void *)(uintptr_t)(i*0x1000),1);
 		}
 	}
 }
 
-uint8_t clone_data[4096];
+uint8_t clone_data[0x1000];
 
 bool clone_user_pages() {
 	for (uint32_t i = 0; i < 1024*1024; i++) {
@@ -477,7 +477,7 @@ bool clone_user_pages() {
 			}
 
 			// Copy the data from the original page
-			memcpy(clone_data, (void *)(i*4096), 4096);
+			memcpy(clone_data, (void *)(i*0x1000), 0x1000);
 
 			// Swap the virtual address' physical page for the new physical page
 			kernel_tables[i].address = (uint32_t)paddr>>12;
@@ -491,7 +491,7 @@ bool clone_user_pages() {
 			asm volatile("movl %%cr3, %%ecx; movl %%ecx, %%cr3":::"ecx","memory");
 
 			// Copy the data into the new page
-			memcpy((void *)(i*4096), clone_data, 4096);
+			memcpy((void *)(i*0x1000), clone_data, 0x1000);
 
 			// Set page's write permission back to what it was before.
 			// This will be updated next time we flush the TLB.
@@ -505,13 +505,13 @@ bool clone_user_pages() {
 
 bool check_user(void *vaddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
+	vaddr_page/=0x1000;
 	return kernel_tables[vaddr_page].user;
 }
 
 uint8_t get_page_permissions(void *vaddr) {
 	uint32_t vaddr_page = (uint32_t)vaddr;
-	vaddr_page/=4096;
+	vaddr_page/=0x1000;
 	return kernel_tables[vaddr_page].present |
 			(kernel_tables[vaddr_page].readwrite<<1) |
 			(kernel_tables[vaddr_page].user<<2);

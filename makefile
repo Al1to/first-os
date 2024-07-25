@@ -16,21 +16,21 @@ idt/idt.o \
 idt/idt_s.o \
 drivers/pit/pit.o \
 drivers/keyboard/keyboard.o \
+memory/memory.o \
+drivers/disk/disk.o \
+drivers/disk/ahci/ahci.o \
 syscalls/handler/syscall_handler.o \
 syscalls/handler/syscall_handler_s.o \
 syscalls/ivt/ivt.o \
 terminal/terminal.o \
 std/math/pow.o \
+std/mem/mem.o \
 std/string/itoa.o \
 std/string/memcpy.o \
 std/string/memset.o \
 std/string/strlen.o \
 std/string/strcmp.o \
 std/string/strcpy.o \
-# std/mem/mem.o \
-# drivers/disk/disk.o \
-# drivers/disk/ahci/ahci.o \
-# memory/memory.o \
 
 all: myos.bin
 
